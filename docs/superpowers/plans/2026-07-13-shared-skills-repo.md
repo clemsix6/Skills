@@ -209,7 +209,7 @@ parallel sessions from colliding.
 
 - [ ] **Step 7: Verify fragments against sources** — no rule lost, only the listed edits:
 
-Run: `grep -c "CRUCIAL" /Users/clement/Skills/go-style.md` — Expected: `5` (KISS, Minimal Public API, Function Size, File Size, go.mod Hygiene).
+Run: `grep -c "^### .*CRUCIAL" /Users/clement/Skills/go-style.md` — Expected: `5` (KISS, Minimal Public API, Function Size, File Size, go.mod Hygiene).
 Run: `grep -n "TrueWallet\|Hermenea\|BluePods\|Notion\|truewalletapp" /Users/clement/Skills/*.md` — Expected: no output (fragments are project-agnostic).
 
 - [ ] **Step 8: Commit**
