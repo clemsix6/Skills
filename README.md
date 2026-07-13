@@ -31,7 +31,8 @@ project — that is expected.
    Drop `go-style` for non-Go repos. For Rust code, import
    `@~/Skills/rust-style.md` — in a mixed repo, put that line in a
    `CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
-   are touched.
+   are touched. Projects that keep a graphify knowledge graph also import
+   `@~/Skills/graphify.md` (inert when `graphify-out/` is absent).
 
 2. Commit `.claude/settings.json` with the SessionStart hook:
 
@@ -62,6 +63,7 @@ project — that is expected.
 | `commit-convention.md` | Commit message format |
 | `git-workflow.md` | Branching model and PR lifecycle |
 | `feature-pipeline.md` | The feature-development pipeline (superpowers custom) |
+| `graphify.md` | Knowledge-graph usage: query-first, update discipline (projects with a graph only) |
 
 ## Rules of this repo
 
