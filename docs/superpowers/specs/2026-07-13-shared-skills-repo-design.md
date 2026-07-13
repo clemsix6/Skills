@@ -148,10 +148,13 @@ split). Service repos get imports + hook like TrueWallet's.
 
 **BluePods** (single repo, mixed language):
 
-- `.claude/CLAUDE.md` (root): imports `general`, `go-style`,
-  `commit-convention`, `git-workflow`, `feature-pipeline`; keeps locally — the
-  VISION/WHITEPAPER pointers, documentation conventions, project layout, the
-  batch rule extension (pods/wasm-gas builds must pass too).
+- A committed root `CLAUDE.md` (the repo gitignores `.claude/` and had
+  deliberately untracked `.claude/CLAUDE.md`, so a root file is what actually
+  reaches collaborators): imports `general`, `go-style`, `commit-convention`,
+  `git-workflow`, `feature-pipeline`; keeps locally — the VISION/WHITEPAPER
+  pointers, documentation conventions, project layout, the batch rule extension
+  (pods/wasm-gas builds must pass too). The local `.claude/CLAUDE.md` mirrors it
+  until the adoption PR merges, then gets deleted.
 - `pods/CLAUDE.md` and `wasm-gas/CLAUDE.md` (new, one line each):
   `@~/Skills/rust-style.md`. Claude Code loads subdirectory CLAUDE.md files on
   demand, so Rust style enters the context only when files in those subtrees are

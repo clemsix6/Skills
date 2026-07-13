@@ -572,3 +572,23 @@ push, `gh pr create --draft` on `clemsix6/BluePods`.
 - [ ] **Step 2: Fresh-session checks** (manual, with the user): in TrueWallet, a new session states the commit convention and the 25-line function limit without opening files; same in a `.wt/` worktree; a BluePods Go session does NOT know the Rust rules until a `pods/` file is touched.
 - [ ] **Step 3: Offline check** — disable network, start a session in a wired project: the hook exits silently, the session works on the local clone.
 - [ ] **Step 4: Cleanup** — delete the three `.pre-migration` copies; commit any spec/plan corrections discovered; report results to the user.
+
+---
+
+## Execution Notes (as-built)
+
+- The `### Notion tickets` heading sits at TW line 218, not 219 — the assembled
+  parent file used 218–264.
+- Service-repo wiring went through worktrees from `origin/main`
+  (`.wt/shared-skills/`) instead of `checkout main && pull` — several main
+  checkouts were dirty or on task branches, and touching them would have
+  violated the parallel-session isolation rule.
+- Entities, Frontend, LandingPage (TrueWallet) and BluePods gitignore
+  `.claude/` — their `.gitignore` now reads `.claude/*` + `!.claude/settings.json`
+  so the hook is tracked while local files stay ignored.
+- BluePods: the imports live in a committed root `CLAUDE.md` (its
+  `.claude/CLAUDE.md` was deliberately untracked, so it cannot distribute);
+  the local file mirrors the root one until the PR merges.
+- Hermenea-Frontend is an empty repo (no commits, no remote) — skipped; the
+  Skills README covers wiring it when the project starts.
+- The Notion `Repo` select gained `Dashboard` and `LandingPage` options.
