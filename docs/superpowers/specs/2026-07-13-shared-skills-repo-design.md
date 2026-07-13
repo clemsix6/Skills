@@ -109,7 +109,7 @@ nothing project-specific, nothing sensitive.
 | `go-style.md` | Go Coding Standards: KISS, minimal public API, documentation, code style, function/file size, TODO comments, go.mod hygiene, error wrapping, doc example. | TrueWallet | TrueWallet, Hermenea, BluePods (root) |
 | `rust-style.md` | The current `Skills/CLAUDE.md` Rust standards, near-verbatim. | Skills | BluePods `pods/` and `wasm-gas/`, future Rust projects |
 | `commit-convention.md` | Title line + `[+]/[-]/[&]/[!]` body, no footers. | identical ×3 | all projects |
-| `git-workflow.md` | `main` as the only long-lived branch, `type/kebab-description` branches, squash-merge, PR lifecycle (draft after first push, body kept current, ready when CI is green). | TrueWallet | all projects (new adoption for Hermenea) |
+| `git-workflow.md` | `main` as the only long-lived branch, `type/kebab-description` branches, squash-merge, PR lifecycle (draft after first push, body kept current, ready when CI is green); "work on the right code" rules — analyses and bug fixes start from the up-to-date default branch, `git fetch origin` before searching branches. | TrueWallet | all projects (new adoption for Hermenea) |
 | `feature-pipeline.md` | The custom superpowers pipeline: the common steps (brainstorm → spec → spec review → autonomous fix → spec summary to the user → plan → plan+spec review → autonomous fix → implementation), plan rules (single phase, batches of ~1-5, 1 task = 1 commit), per-batch rules (build stays green, wiring per batch, critical-batch review, push per batch), and the generic single-repo task-workspace pattern (`.wt/<task>` worktree from `origin/main`, no CWD change, `-C` flag, cleanup at merge). States explicitly: *"The project CLAUDE.md may insert additional steps or override the workspace pattern."* | TrueWallet | TrueWallet, Hermenea, BluePods |
 
 Non-imported files: `README.md` (how to wire a project: the import lines, the
@@ -133,9 +133,12 @@ multi-repo sessions.
   touched repo), deployment & release (MEP, staging validation, versioning,
   chained releases, rollback), tooling (gopls, Signoz), server access.
 - Each service repo (`TrueWallet-Backend`, `TrueWallet-Entities`, …): its
-  existing repo-specific CLAUDE.md gains the same five import lines at the top,
-  and the repo commits `.claude/settings.json` with the hook. This is what makes
-  the standards reach collaborators at all.
+  existing repo-specific CLAUDE.md gains the import lines at the top — `general`,
+  `commit-convention`, `git-workflow`, `feature-pipeline` for every repo, plus
+  `go-style` for Go repos (a repo with a `go.mod`) — and the repo commits
+  `.claude/settings.json` with the hook. Repos without a CLAUDE.md get a minimal
+  one holding just the imports. This is what makes the standards reach
+  collaborators at all.
 
 **Hermenea** (same parent-dir structure): parent CLAUDE.md imports the same five
 fragments; keeps locally — `pkg/` package organization, hexagonal architecture
