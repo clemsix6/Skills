@@ -15,9 +15,22 @@ goes through a short-lived branch and a PR.
 
 1. After the first commit + push, open a **draft** PR. (A PR cannot be opened
    with zero commits, so the first push is the trigger.)
-2. The body states the goal, links the spec and plan under `docs/superpowers/`,
-   and summarizes the current state.
-3. After every push, update the PR body to reflect the current state.
+2. The body follows this structure — the first two sections always, the rest
+   only when they apply (drop the ones that don't):
+   - **Why** — the problem or goal, in 1-3 sentences.
+   - **Changes** — `[+]` added · `[&]` changed · `[!]` fixed · `[-]` removed.
+   - **Docs** — *when the task has a spec/plan*: links to them under
+     `docs/superpowers/` (a feature does; a fix may not).
+   - **State** — *when there is a plan*: a checklist mirroring the plan's
+     batches (or the work's steps), each item ticked once its commit is pushed,
+     unchecked while pending — this is what makes progress readable at a glance.
+   - **Deployment notes** — *when relevant*: new env var, secret, migration, or
+     service order.
+   - **Known issues** — *when applicable*: bugs found but deliberately left
+     unfixed as out of scope.
+   - **Related PRs** — *when cross-repo*: e.g. requires Entities #9.
+3. After every push, update the PR body: tick the batch that just landed and
+   refresh any section that moved.
 4. When the work is complete and CI is green, mark the PR ready for review.
 
 ### Working on the right code (CRUCIAL)
