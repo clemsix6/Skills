@@ -104,6 +104,25 @@ A batch-manager returns a short synthesis. Act on four things:
 **You are the only writer of the spec, the plan and the PR body.** Agents report;
 you write.
 
+### Scope (mandatory)
+
+**The approved spec is the scope.** Step 6 seals it: after that, nothing is added
+to what the feature does and nothing about its behaviour changes — at any stage,
+by any agent, including you.
+
+Reviews will find real bugs and real inconsistencies that sit outside the spec.
+Every one of them is **reported, never fixed.** A correction nobody asked for
+ships behaviour nobody approved, inside a PR whose scope its reviewer trusts.
+They go to `Known issues` and to the supervisor.
+
+One exception, and its test:
+
+> Does the plan need this fixed to be implementable at all?
+
+**Yes** — fix it, and say so in the PR: a blocker on the path to the spec was
+implicitly in scope from the start. **No** — report it, however small and however
+obviously right.
+
 ### Spec adjustments
 
 You may adjust the spec autonomously. The line:

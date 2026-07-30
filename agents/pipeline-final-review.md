@@ -86,11 +86,13 @@ Then, in this order:
   differently from the spec. Say so explicitly when coverage is complete.
 - **Drift** — undeclared delta first, then the approved and declared ones.
 - **Findings** — most severe first, with file and line, what is wrong, what it
-  breaks. **Tag each one `fix` or `supervisor`**: `fix` is applied autonomously,
-  `supervisor` is anything whose correction would change what the user gets, or
-  that reports drift nobody declared. The orchestrator has one round to act on
-  this list and no way to tell the two apart otherwise — an untagged finding of
-  the second kind gets silently applied at the last gate before a human.
+  breaks. **Tag each one `fix` or `supervisor`**: `fix` brings the code back to
+  what the approved spec says, and gets applied autonomously; `supervisor` is
+  everything else — a real bug outside the spec, a correction that would change
+  what the user gets, drift nobody declared. The orchestrator has one round to
+  act on this list and no way to tell the two apart otherwise, so an untagged
+  finding of the second kind gets silently applied at the last gate before a
+  human.
 - **Verification** — the commands you ran and what they returned.
 - **PR body** — what is missing or inaccurate.
 
