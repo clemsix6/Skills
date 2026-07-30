@@ -1,6 +1,6 @@
 ---
 name: pipeline-plan-review
-description: Reviews a complete implementation plan against its spec before any code exists — coverage, batching, and the annotations later stages depend on. Dispatched by the orchestrator at step 9 of the pipeline. Read-only.
+description: Reviews a complete implementation plan against its spec before any code exists — coverage, batching, and the annotations later stages depend on. Dispatched by the orchestrator in heavy mode, once the plan is written. Read-only.
 tools: Read, Grep, Glob, Bash
 model: opus
 effort: xhigh

@@ -68,7 +68,8 @@ Two outcomes. You never wait for an answer mid-run — the orchestrator is not
 watching a mailbox while your batch runs, so returning *is* the fast path.
 
 - **Clean** — the review passed with nothing to fix, or the re-review passed.
-  Push, return your synthesis.
+  **Push every commit the batch produced**, then return your synthesis. A batch
+  ends on the remote; what stays local is lost to the next rewind.
 - **Blocked** — the re-review failed; a task proved impossible as specified; a
   dispatch failed; or a `plan` / `spec` finding means **the code you would push
   is itself wrong**, which you cannot fix without editing files you may not

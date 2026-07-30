@@ -66,6 +66,11 @@ That is the whole wiring — the hook is already installed at user scope.
 skills are installed — its first steps call the `brainstorming` skill and the
 standard spec and plan formats. Import it only into projects that have them.
 
+It stops right after the supervisor picks **heavy** or **light** and hands off to
+`feature-pipeline-heavy.md` or `feature-pipeline-light.md`. Those two are read at
+that moment, not imported: only the orchestrator ever needs one, and importing
+both would load each mode's steps into all eight agents.
+
 Drop `go-style` for non-Go repos. For Rust code, import
 `@~/Skills/rust-style.md` — in a mixed repo, put that line in a
 `CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
@@ -81,7 +86,9 @@ are touched. Projects that keep a graphify knowledge graph also import
 | `rust-style.md` | Rust coding standards |
 | `commit-convention.md` | Commit message format |
 | `git-workflow.md` | Branching model and PR lifecycle |
-| `feature-pipeline.md` | The feature-development pipeline (superpowers custom) |
+| `feature-pipeline.md` | The feature-development pipeline: common rules, and the heavy/light choice |
+| `feature-pipeline-heavy.md` | Heavy execution — reviewed spec and plan, batch-managers, a review around every batch. **Read on demand, not imported** |
+| `feature-pipeline-light.md` | Light execution — one combined spec+plan review, one agent per batch, one review at the end. **Read on demand, not imported** |
 | `graphify.md` | Knowledge-graph usage: query-first, update discipline (projects with a graph only) |
 
 ## Agents
@@ -90,28 +97,35 @@ are touched. Projects that keep a graphify knowledge graph also import
 name. They are installed at user scope by the hook above, so a wired project
 needs no `.claude/agents/` of its own and every project gets them at once.
 
-| Definition | Model | Effort | Role |
-|---|---|---|---|
-| `pipeline-spec-review` | opus | xhigh | Reviews the spec against the intent it came from, before the human checkpoint |
-| `pipeline-plan-review` | opus | xhigh | Reviews the whole plan against the spec — coverage, batching, ordering, annotations |
-| `pipeline-batch-manager` | opus | inherit | Owns one batch end to end: precondition check, reviews, implementation dispatch, fix, push |
-| `pipeline-batch-plan-review` | opus | high | Hunts for defects in one batch's plan, in a narrow scope and with the previous batches' real code as context |
-| `pipeline-implement` | sonnet | inherit | Implements one task, reading the plan and spec from the repo itself |
-| `pipeline-batch-review` | opus | high | Reviews an implemented batch's full diff, focused on consistency across tasks written by different agents |
-| `pipeline-final-review` | opus | max | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
+| Definition | Model | Effort | Mode | Role |
+|---|---|---|---|---|
+| `pipeline-spec-review` | opus | xhigh | heavy | Reviews the spec against the intent it came from, before the human checkpoint |
+| `pipeline-plan-review` | opus | xhigh | heavy | Reviews the whole plan against the spec — coverage, batching, ordering, annotations |
+| `pipeline-spec-plan-review` | inherit | high | light | Reviews spec and plan together — light's only gate before code exists |
+| `pipeline-batch-manager` | opus | inherit | heavy | Owns one batch end to end: precondition check, reviews, implementation dispatch, fix, push |
+| `pipeline-batch-plan-review` | opus | high | heavy | Hunts for defects in one batch's plan, in a narrow scope and with the previous batches' real code as context |
+| `pipeline-implement` | sonnet | inherit | both | Implements one task, a group of them, or a whole batch, reading the plan and spec from the repo itself |
+| `pipeline-batch-review` | opus | high | heavy | Reviews an implemented batch's full diff, focused on consistency across tasks written by different agents |
+| `pipeline-final-review` | opus | max | both | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
 
 Naming: a review named for its subject alone is global (`plan-review` covers the
 whole plan), a `batch-` prefix scopes it to one batch. Effort follows that
 split, since a whole-subject review has the most to hold at once.
+
+`pipeline-spec-plan-review` is the exception, and deliberately: it is global by
+subject but pins no model and sits one notch below `xhigh`, because trading the
+strong model for speed on work with nothing left to design is what light *is*.
+It is also the only gate light runs before code, so it is not cut further.
 
 Colour is display only — it groups agents by the kind of work they do so a run is
 readable at a glance: `blue` for reviews whose subject is a document, `orange`
 for reviews whose subject is a diff, `green` for implementation, `purple` for the
 batch-manager. It carries no behaviour and enforces nothing.
 
-Only `pipeline-batch-manager` dispatches: the five reviewers and
+Only `pipeline-batch-manager` dispatches: the six reviewers and
 `pipeline-implement` are all denied `Agent`, so none of them can fan out. That
-part is structural.
+part is structural. In light mode nothing below the orchestrator dispatches at
+all — there is no batch-manager.
 
 Two things are not. Read-only is a prompt constraint — the reviewers hold `Bash`
 because they need `git`, `gh` and the build, and `Bash` can write. And
@@ -137,13 +151,14 @@ restart the session before relying on it.
 ### Platform notes
 
 Reference for maintaining these definitions — deliberately kept out of
-`feature-pipeline.md`, which loads into all seven agents and should carry only
+`feature-pipeline.md`, which loads into all eight agents and should carry only
 what one of them acts on.
 
-- **Nesting.** The pipeline is three levels: session → batch-manager → review
-  and implementation agents. That is two subagent layers, within the default
-  spawn depth of three. If a batch-manager cannot spawn, check
-  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`.
+- **Nesting.** Heavy is three levels: session → batch-manager → review and
+  implementation agents. That is two subagent layers, within the default spawn
+  depth of three. If a batch-manager cannot spawn, check
+  `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`. Light is two levels and never comes
+  near it.
 - **`background`.** Subagents run in the background by default; the platform
   moves one to the foreground when its caller needs the result before continuing.
   Only `pipeline-batch-manager` sets the field, to `true`, so the conversation
