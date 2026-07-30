@@ -11,63 +11,66 @@ every agent on every machine follows the latest version.
 git clone https://github.com/clemsix6/Skills ~/Skills
 ```
 
-Wired projects also carry a `SessionStart` hook that clones this repo if absent
-and pulls it otherwise, so after the first trusted session the clone maintains
-itself. You will be asked to approve the hook the first time you trust a wired
-project — that is expected.
+Then add this `SessionStart` hook to `~/.claude/settings.json` — **user scope,
+not per project.** It pulls the clone and installs the subagent definitions into
+`~/.claude/agents/skills/`. Both are user-level paths, so one copy serves every
+project and there is nothing to keep in sync:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -d \"$HOME/Skills/.git\" ]; then git -C \"$HOME/Skills\" pull --ff-only --quiet || echo 'Skills: pull failed, this machine is running an older copy' >&2; else git clone --quiet https://github.com/clemsix6/Skills \"$HOME/Skills\" || echo 'Skills: clone failed' >&2; fi; if [ -d \"$HOME/Skills/agents\" ]; then mkdir -p \"$HOME/.claude/agents\" && rm -rf \"$HOME/.claude/agents/.skills-new\" && cp -R \"$HOME/Skills/agents\" \"$HOME/.claude/agents/.skills-new\" && rm -rf \"$HOME/.claude/agents/skills\" && mv \"$HOME/.claude/agents/.skills-new\" \"$HOME/.claude/agents/skills\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The install copies to a staging directory first and only swaps it in once the
+copy succeeded, so a failed or interrupted pull leaves the previous definitions
+in place rather than uninstalling the pipeline silently. It is a replace, so a
+definition deleted here disappears everywhere at the next session, and it only
+ever touches `~/.claude/agents/skills/` — personal agents living directly under
+`~/.claude/agents/` are left alone.
+
+If a dispatch ever fails with an unknown agent type, this install is why: check
+that `~/.claude/agents/skills/` exists and restart the session.
+
+Older per-project copies of this hook may still sit in wired repos. They only
+pull the clone, never install, so they are harmless duplicates of the first half
+— but they are also why the user-scope hook is the one to edit when this changes.
 
 ## Wiring a project
 
-1. Add the import lines at the top of the project's `CLAUDE.md`
-   (create the file if the repo has none):
+Add the import lines at the top of the project's `CLAUDE.md` (create the file if
+the repo has none):
 
-   ```
-   @~/Skills/general.md
-   @~/Skills/go-style.md
-   @~/Skills/commit-convention.md
-   @~/Skills/git-workflow.md
-   @~/Skills/feature-pipeline.md
-   ```
+```
+@~/Skills/general.md
+@~/Skills/go-style.md
+@~/Skills/commit-convention.md
+@~/Skills/git-workflow.md
+@~/Skills/feature-pipeline.md
+```
 
-   `feature-pipeline.md` assumes the [superpowers](https://github.com/obra/superpowers)
-   skills are installed — its first steps call the `brainstorming` skill and the
-   standard spec and plan formats. Import it only into projects that have them.
+That is the whole wiring — the hook is already installed at user scope.
 
-   Drop `go-style` for non-Go repos. For Rust code, import
-   `@~/Skills/rust-style.md` — in a mixed repo, put that line in a
-   `CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
-   are touched. Projects that keep a graphify knowledge graph also import
-   `@~/Skills/graphify.md` (inert when `graphify-out/` is absent).
+`feature-pipeline.md` assumes the [superpowers](https://github.com/obra/superpowers)
+skills are installed — its first steps call the `brainstorming` skill and the
+standard spec and plan formats. Import it only into projects that have them.
 
-2. Commit `.claude/settings.json` with the SessionStart hook. It refreshes the
-   clone and installs the subagent definitions into `~/.claude/agents/skills/`:
-
-   ```json
-   {
-     "hooks": {
-       "SessionStart": [
-         {
-           "hooks": [
-             {
-               "type": "command",
-               "command": "if [ -d \"$HOME/Skills/.git\" ]; then git -C \"$HOME/Skills\" pull --ff-only --quiet || echo 'Skills: pull failed, this machine is running an older copy' >&2; else git clone --quiet https://github.com/clemsix6/Skills \"$HOME/Skills\" || echo 'Skills: clone failed' >&2; fi; if [ -d \"$HOME/Skills/agents\" ]; then mkdir -p \"$HOME/.claude/agents\" && rm -rf \"$HOME/.claude/agents/.skills-new\" && cp -R \"$HOME/Skills/agents\" \"$HOME/.claude/agents/.skills-new\" && rm -rf \"$HOME/.claude/agents/skills\" && mv \"$HOME/.claude/agents/.skills-new\" \"$HOME/.claude/agents/skills\"; fi"
-             }
-           ]
-         }
-       ]
-     }
-   }
-   ```
-
-   The install copies to a staging directory first and only swaps it in once the
-   copy succeeded, so a failed or interrupted pull leaves the previous
-   definitions in place rather than uninstalling the pipeline silently. It is a
-   replace, so a definition deleted here disappears everywhere at the next
-   session, and it only ever touches `~/.claude/agents/skills/` — personal
-   agents living directly under `~/.claude/agents/` are left alone.
-
-   If a dispatch ever fails with an unknown agent type, this install is why:
-   check that `~/.claude/agents/skills/` exists and restart the session.
+Drop `go-style` for non-Go repos. For Rust code, import
+`@~/Skills/rust-style.md` — in a mixed repo, put that line in a
+`CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
+are touched. Projects that keep a graphify knowledge graph also import
+`@~/Skills/graphify.md` (inert when `graphify-out/` is absent).
 
 ## Fragments
 
