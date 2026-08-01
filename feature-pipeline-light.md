@@ -11,8 +11,7 @@ here continues.
    SHA in the PR body under `Docs`. It is the baseline the final review measures
    drift against.
 7. **Plan** — see "Plan rules", in `<worktree>/docs/superpowers/plans/`. Batched
-   as usual, with **no `parallel` / `same-agent` annotation**: a batch goes to one
-   agent whole.
+   as usual: a batch goes to one agent whole.
 8. **Spec and plan review** — dispatch `pipeline-spec-plan-review`, on the two
    documents together. The only pass before code exists.
 9. **Fix the plan, commit and push it** — whether or not it changed, so the PR's

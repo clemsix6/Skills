@@ -44,7 +44,9 @@ step 4. Both end at the same place: the PR marked ready.
   the whole picture is visible; deciding it at dispatch time defaults to "not
   complex" every time.
 - **1 task = 1 commit**, and **a batch ends with every one of them pushed** — in
-  both modes.
+  both modes. Exception: an integration task that only verifies (full suite,
+  vet, sweeps) commits nothing when everything is green — its artifact is the
+  green gate and the updated PR body; it commits only the fixes it surfaces.
 
 ### Dispatch
 
