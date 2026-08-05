@@ -77,6 +77,10 @@ Drop `go-style` for non-Go repos. For Rust code, import
 are touched. Projects that keep a graphify knowledge graph also import
 `@~/Skills/graphify.md` (inert when `graphify-out/` is absent).
 
+Projects the owner directs without reading the code import `@~/Skills/vibe.md`.
+It keeps code out of Claude's replies, so leave it out of any repo whose owner
+reviews diffs.
+
 ## Fragments
 
 | File | Contents |
@@ -90,6 +94,7 @@ are touched. Projects that keep a graphify knowledge graph also import
 | `feature-pipeline-heavy.md` | Heavy execution — reviewed spec and plan, batch-managers, a review around every batch. **Read on demand, not imported** |
 | `feature-pipeline-light.md` | Light execution — one combined spec+plan review, one agent per batch, one review at the end. **Read on demand, not imported** |
 | `graphify.md` | Knowledge-graph usage: query-first, update discipline (projects with a graph only) |
+| `vibe.md` | Tone and formatting: outcome first, plain prose, no code in replies (vibe-coded projects only) |
 
 ## Agents
 
