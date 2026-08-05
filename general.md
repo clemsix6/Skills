@@ -26,6 +26,34 @@ single source of truth, the Justfile is a local convenience alias and CI/Docker
 keep calling the existing source. Do not stack `just` on top of an existing
 centralization just to add a binary.
 
+### Comments Must Not Rot (CRUCIAL)
+
+A comment is written once and read for years while the code under it keeps
+moving. Anything a comment states that the code can change on its own becomes a
+lie eventually — and nothing catches it: no compiler, no test, no reviewer flags
+a comment that quietly stopped being true. So a comment must only say things
+that survive the next edit.
+
+- **No hardcoded values.** Never restate a literal the code already holds —
+  limits, timeouts, sizes, ports, counts, prices, version numbers, field lists.
+  Say what the value is *for* and let the reader look at it: "retries transient
+  failures with exponential backoff", not "retries 5 times, 2s apart". The next
+  person who tunes the number will not think to update the sentence.
+- **No temporal statements.** Nothing whose truth depends on when it is read:
+  "new", "current", "for now", "temporary", "recently added", "will be removed
+  next quarter", dates, sprint or release numbers, "replaces the old X". Time
+  invalidates these with nobody touching the file — git history already records
+  when and why something changed.
+- **Describe intent and invariants, not state.** Why the code exists and what
+  must hold are stable; what the value happens to be today and what the codebase
+  looked like when it was written are not.
+- **Exception**: a constraint that lives *outside* the codebase — a third-party
+  API limit, a protocol constant, a spec requirement — may be cited when it is
+  the reason the code is shaped that way, and then it is named with its source
+  so a reader can re-check it.
+- TODO comments stay allowed: they describe the work left to do, never a date or
+  a release it is promised for.
+
 ### CLAUDE.md Design (CRUCIAL)
 
 - CLAUDE.md files describe the **why** and **principles** — not the exact file

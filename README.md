@@ -85,7 +85,7 @@ reviews diffs.
 
 | File | Contents |
 |---|---|
-| `general.md` | Cross-language defaults: command runner (just), CLAUDE.md design rules |
+| `general.md` | Cross-language defaults: command runner (just), comment rules, CLAUDE.md design rules |
 | `go-style.md` | Go coding standards |
 | `rust-style.md` | Rust coding standards |
 | `commit-convention.md` | Commit message format |
