@@ -61,6 +61,22 @@
 - Format: `// TODO: description of what needs to be done`
 - Example: `// TODO: add validation for negative amounts`
 
+### Go Version
+
+- New projects start on Go 1.27: `go 1.27` in `go.mod`.
+- An existing project below 1.27 must not be bumped as a side effect of
+  unrelated work — a toolchain upgrade touches the whole module and deserves
+  its own change. Flag it to the supervisor and recommend the upgrade to 1.27.
+- Raise it once per feature, not on every task: one reminder, then move on.
+- **The toolchain is the authority on the language, not your memory.** Training
+  data lags releases, so assume you are behind. The compiler rejects a feature
+  that does not exist yet; nothing rejects the reverse — hand-rolling what the
+  standard library now does in one call. Before writing a workaround for a gap
+  you remember, confirm the gap is still there.
+- `go doc <pkg> [<symbol>]` answers what exists and with which signature, read
+  from the toolchain actually in use. Prefer it to recall. For what a given
+  release changed, read that release's notes: the toolchain ships none locally.
+
 ### go.mod Hygiene (CRUCIAL)
 
 - It is FORBIDDEN to commit or push code with a `replace` directive in `go.mod`
