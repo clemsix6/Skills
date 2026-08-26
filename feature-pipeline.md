@@ -13,22 +13,37 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
 
 1. **Brainstorming** — superpowers `brainstorming` skill. Reads the main
    checkout, writes nothing.
-2. **Mode** — ask the supervisor: **heavy** or **light**. Settled here, never
-   revisited mid-run.
-
-   - **heavy** — the spec and the plan are each reviewed on their own, and every
-     batch gets a plan review before it and a diff review after.
-   - **light** — one combined spec-and-plan review, one agent per batch, one
-     review at the end.
-
-   Recommend one in a sentence — **light when there is nothing left to design** —
-   and run **heavy if they pick neither**.
-3. **Workspace + branch** — create the worktree (see "Task workspace").
+2. **Workspace + branch** — create the worktree (see "Task workspace").
    Everything after this — spec, plan, code, commits — lives inside it.
+3. **Spec** — standard, in `<worktree>/docs/superpowers/specs/`. It is not
+   reviewed on its own; the review at step 7 covers it.
+4. **Spec summary to the supervisor** — the only point where a human approves the
+   work, and the one that seals the scope. Nothing is built until they accept it.
+5. **Commit the approved spec, push, open the draft PR** — record that commit's
+   SHA in the PR body under `Docs`. It is the baseline the final review measures
+   drift against.
+6. **Plan** — see "Plan rules", in `<worktree>/docs/superpowers/plans/`. Batched
+   as usual: a batch goes to one agent whole.
+7. **Spec and plan review** — dispatch `pipeline-spec-plan-review`, on the two
+   documents together. The only pass before code exists.
+8. **Fix the plan, commit and push it** — whether or not it changed, so the PR's
+   `Docs` link resolves. Add the `State` checklist to the PR body, one line per
+   batch. A finding against the **spec** cannot be fixed here — the supervisor
+   sealed it at step 4, so take it back to them.
+9. **Implementation** — dispatch `pipeline-implement` once per batch, in plan
+   order, **one batch at a time**, giving it the whole batch including the
+   integration task. Pass `model: opus` for a batch containing a task the plan
+   marks complex. When the batch comes back: push every commit it produced, tick
+   it in `State`, then dispatch the next one.
 
-**Then read `~/Skills/feature-pipeline-heavy.md` or
-`~/Skills/feature-pipeline-light.md`**, whichever was picked, and follow it from
-step 4. Both end at the same place: the PR marked ready.
+   A batch that comes back reporting its task impossible, or a defect in the
+   plan, goes to the supervisor. No second attempt.
+10. **Final review** — dispatch `pipeline-final-review`. It tags findings `fix`
+    or `supervisor`: apply the first, take the second to the supervisor. Commit
+    and push those fixes, **then** dispatch it again — it reads a committed diff,
+    so uncommitted work is invisible to it. That second verdict is final; never
+    grade your own fix. If it fails, stop and report rather than marking the PR
+    ready. If it passes, mark ready once CI is green.
 
 ### Plan rules (differ from superpowers)
 
@@ -43,10 +58,10 @@ step 4. Both end at the same place: the PR marked ready.
 - **Mark the tasks that need a stronger model** (see "Models"). The plan is where
   the whole picture is visible; deciding it at dispatch time defaults to "not
   complex" every time.
-- **1 task = 1 commit**, and **a batch ends with every one of them pushed** — in
-  both modes. Exception: an integration task that only verifies (full suite,
-  vet, sweeps) commits nothing when everything is green — its artifact is the
-  green gate and the updated PR body; it commits only the fixes it surfaces.
+- **1 task = 1 commit**, and **a batch ends with every one of them pushed**.
+  Exception: an integration task that only verifies (full suite, vet, sweeps)
+  commits nothing when everything is green — its artifact is the green gate and
+  the updated PR body; it commits only the fixes it surfaces.
 
 ### Dispatch
 
@@ -61,7 +76,7 @@ agent that reads the source itself cannot be handed a lossy summary of it.
 ### What comes back
 
 **You are the only writer of the spec, the plan and the PR body.** Agents report;
-you write. Whatever mode you are in, act on four things:
+you write. Act on four things:
 
 - **`plan` and `spec` findings** — no agent may write either file. Fix the plan
   yourself and push it before anything else builds on it.
@@ -108,18 +123,13 @@ You may adjust the spec autonomously. The line:
 
 ### Models
 
-Reasoning and review on the strong model, execution on the cheap one — most
-defects originate in the plan.
+Review on the strong model where the whole feature is at stake, execution on the
+cheap one.
 
 | Role | Model | Dispatched as |
 |---|---|---|
-| Spec review (heavy) | opus | `pipeline-spec-review` |
-| Plan review (heavy) | opus | `pipeline-plan-review` |
-| Spec + plan review (light) | current | `pipeline-spec-plan-review` |
-| Batch-manager (heavy) | opus | `pipeline-batch-manager` |
-| Scoped plan review (heavy) | opus | `pipeline-batch-plan-review` |
-| Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a task the plan marks complex |
-| Batch review (heavy) | opus | `pipeline-batch-review` |
+| Spec + plan review | current | `pipeline-spec-plan-review` |
+| Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a batch containing a task the plan marks complex |
 | Final review | opus | `pipeline-final-review` |
 
 This fragment loads into every one of those agents, so it describes the pipeline
@@ -136,5 +146,5 @@ of its own and **the main checkout is never touched again for this task**.
   resolves it against the main checkout and builds there compile the wrong tree
   without complaining.
 - **Only you move `HEAD`** — no agent may `checkout`, `pull`, `rebase`, `amend`
-  or force-push, which is what makes the post-block rewind safe.
+  or force-push.
 - **Remove the worktree and the branch after the PR merges.**
