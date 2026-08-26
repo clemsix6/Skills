@@ -98,25 +98,32 @@ needs no `.claude/agents/` of its own and every project gets them at once.
 | Definition | Model | Effort | Role |
 |---|---|---|---|
 | `pipeline-spec-plan-review` | inherit | high | Reviews spec and plan together — the only gate before code exists |
+| `pipeline-batch-review` | inherit | high | Reviews the diff of a batch the plan marks `review`, before the rest of the feature builds on it |
 | `pipeline-implement` | sonnet | inherit | Implements one batch whole, reading the plan and spec from the repo itself |
 | `pipeline-final-review` | opus | max | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
 
 Effort follows how much each pass holds at once: the final review sees the whole
-feature and the whole diff, so it runs at `max`; the pre-implementation gate
-reads two documents.
+feature and the whole diff, so it runs at `max`; the two earlier gates read two
+documents and one batch's diff.
 
-`pipeline-spec-plan-review` pins no model on purpose — it inherits the session's,
-so a session running on the strong model gets a strong gate and one deliberately
-running cheap is not dragged back up. It is still the only gate before code
-exists, so it is not cut further.
+Neither gate pins a model, on purpose — both inherit the session's, so a session
+running on the strong model gets strong gates and one deliberately running cheap
+is not dragged back up.
+
+`pipeline-batch-review` is the only conditional agent: it is dispatched for a
+batch the plan marks `review` and for no other. The mark is a plan-level
+decision because a runtime one defaults to "not sensitive" every time, and it is
+capped at two per feature — a pipeline that reviews every batch is the one this
+one deliberately replaced.
 
 Colour is display only — it groups agents by the kind of work they do so a run is
 readable at a glance: `blue` for the review whose subject is a document, `orange`
-for the review whose subject is a diff, `green` for implementation. It carries no
-behaviour and enforces nothing.
+for the reviews whose subject is a diff, `green` for implementation. It carries
+no behaviour and enforces nothing.
 
-Nothing below the orchestrator dispatches: both reviewers and `pipeline-implement`
-are denied `Agent`, so no agent can fan out. That part is structural.
+Nothing below the orchestrator dispatches: the three reviewers and
+`pipeline-implement` are denied `Agent`, so no agent can fan out. That part is
+structural.
 
 Two things are not. Read-only is a prompt constraint — the reviewers hold `Bash`
 because they need `git`, `gh` and the build, and `Bash` can write. And
@@ -142,7 +149,7 @@ restart the session before relying on it.
 ### Platform notes
 
 Reference for maintaining these definitions — deliberately kept out of
-`feature-pipeline.md`, which loads into all three agents and should carry only
+`feature-pipeline.md`, which loads into all four agents and should carry only
 what one of them acts on.
 
 - **Nesting.** The pipeline is two levels: session → reviewer or implementation

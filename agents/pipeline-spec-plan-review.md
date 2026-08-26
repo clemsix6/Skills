@@ -60,6 +60,14 @@ closely, but a spec finding escalates rather than getting fixed.
 7. **The complexity annotation.** An unmarked batch is implemented by the cheap
    default model, so a task that plainly needs judgment and carries no mark is a
    finding.
+8. **The `review` annotation.** It marks the batches whose defect a later batch
+   would build on without noticing — one whose contract would still compile and
+   still pass that batch's tests if it were wrong, or one landing a schema,
+   migration, persisted format or external surface later batches write against.
+   An unmarked batch of that kind is a finding. So is a marked leaf batch: the
+   gate costs a full pass over a diff whose defects the next build would have
+   caught anyway. Two marks per feature is the ceiling; past that, say the
+   batching is wrong rather than approving the marks.
 
 There is no `parallel` / `same-agent` annotation to check: a batch goes to one
 agent whole.
@@ -81,9 +89,10 @@ fixes it and implementation proceeds) or `spec` (it goes back to the supervisor,
 who sealed it). For each: where it sits, what is wrong, what it breaks concretely
 if built as written.
 
-**Give the complexity annotation its own line, even when it is correct** — the
-orchestrator picks each batch's model from it without re-deriving anything, so
-its state must be an assertion rather than something inferred from your silence.
+**Give the complexity and `review` annotations their own line, even when they
+are correct** — the orchestrator picks each batch's model and its gates from
+them without re-deriving anything, so their state must be an assertion rather
+than something inferred from your silence.
 
 No preamble, no restatement of either document, no praise. Nothing found is one
 line.

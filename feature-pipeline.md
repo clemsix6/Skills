@@ -7,6 +7,22 @@ refactors, investigations and ops are done directly, with systematic-debugging
 for bugs. When you skip this pipeline, say in one line which side of that test
 the work falls on.
 
+**Quick wins skip it too.** The test above decides whether something is a
+feature; it does not decide whether that feature earns a spec and a plan. A
+change that does give a capability but whose spec and plan would say less than
+the diff — a flag, a field on a response, a copy
+change, a small fix — is written directly, on a branch, with the usual commit
+and PR conventions. The test is not "is this a feature", it is: **would writing
+the spec and the plan tell anyone anything the diff does not already say?** No,
+and there is nothing to design: write the code.
+
+Two things send a small change back through the pipeline anyway. It touches
+something later work builds on — a schema, a persisted format, an external
+surface, a contract other code assumes — or you cannot get to the end of it
+without taking design decisions you did not have when you started. The second
+one is discovered mid-change: stop and run the pipeline rather than deciding
+alone in a diff nobody planned.
+
 The project CLAUDE.md may add steps or override the task-workspace pattern.
 
 ### Pipeline (in order)
@@ -39,6 +55,15 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    integration task. Pass `model: opus` for a batch containing a task the plan
    marks complex. When the batch comes back clean: push every commit it
    produced, tick it in `State`, then dispatch the next one.
+
+   **A batch the plan marks `review` is reviewed before it is pushed** —
+   dispatch `pipeline-batch-review` on the commits it produced. Findings tagged
+   `batch` go back to `pipeline-implement` as a fix brief, one round, then
+   dispatch the review again on the amended diff; that second verdict is final.
+   A `plan` finding is yours to rule on and may reach later batches; a `spec`
+   finding goes to the supervisor. Whatever is still open after that round goes
+   to `Known issues` and belongs to the final review — this is one gate, not a
+   loop.
 
    **A blocked batch is yours to unblock.** Whether it reports a defect in the
    plan or a task impossible as specified, both are the plan, and the plan is
@@ -81,6 +106,16 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
 - **Mark the tasks that need a stronger model** (see "Models"). The plan is where
   the whole picture is visible; deciding it at dispatch time defaults to "not
   complex" every time.
+- **Mark `review` the batches the rest of the feature builds on.** Either test
+  qualifies a batch: a later batch depends on it in a way where a wrong version
+  would still compile and still pass that batch's own tests — a data model,
+  error semantics, an invariant, an authorization rule, a pattern later batches
+  extend by copying — or it lands something hard to unwind that later batches
+  write against: a schema, a migration, a persisted format, an external surface.
+  **If the only answer to "what breaks if this is wrong" is "the next batch's
+  build", do not mark it** — the compiler reviews that for free. Size never
+  qualifies a batch. Two per feature at most; if more qualify, the batching is
+  wrong, not the plan's need for gates.
 - **1 task = 1 commit**, and **a batch ends with every one of them pushed**.
   Exception: an integration task that only verifies (full suite, vet, sweeps)
   commits nothing when everything is green — its artifact is the green gate and
@@ -152,6 +187,7 @@ cheap one.
 | Role | Model | Dispatched as |
 |---|---|---|
 | Spec + plan review | current | `pipeline-spec-plan-review` |
+| Batch review, marked batches only | current | `pipeline-batch-review` |
 | Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a batch containing a task the plan marks complex, and for a batch's third attempt |
 | Final review | opus | `pipeline-final-review` |
 
