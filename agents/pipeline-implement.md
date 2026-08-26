@@ -20,7 +20,9 @@ your commits to the wrong branch. Pass `-C <worktree>` to every command that
 takes it.
 
 Never `checkout`, `pull`, `rebase` or move `HEAD`. The orchestrator owns this
-branch, and it pushes your commits once you return.
+branch: it pushes your commits once you return, and it rewinds the branch to the
+remote when a batch comes back blocked — a reset that is only safe because no
+agent competes with it.
 
 ## Read the source, not your prompt
 

@@ -37,11 +37,30 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
 9. **Implementation** — dispatch `pipeline-implement` once per batch, in plan
    order, **one batch at a time**, giving it the whole batch including the
    integration task. Pass `model: opus` for a batch containing a task the plan
-   marks complex. When the batch comes back: push every commit it produced, tick
-   it in `State`, then dispatch the next one.
+   marks complex. When the batch comes back clean: push every commit it
+   produced, tick it in `State`, then dispatch the next one.
 
-   A batch that comes back reporting its task impossible, or a defect in the
-   plan, goes to the supervisor. No second attempt.
+   **A blocked batch is yours to unblock.** Whether it reports a defect in the
+   plan or a task impossible as specified, both are the plan, and the plan is
+   yours: rule on it, fix it, commit and push it, rewind the branch to the
+   remote, and re-dispatch the batch — telling the new agent what blocked the
+   last attempt. **Three attempts per batch**, the third on `model: opus`.
+
+   The rewind is what makes that safe: every earlier batch is already pushed, so
+   the remote is the last clean boundary, and the commits the blocked attempt
+   produced were written against a plan that no longer says the same thing.
+
+   Take it to the supervisor only when the fix would change what the end user
+   gets — that is the spec, and they sealed it — or when three attempts came back
+   blocked, or when every path forward is a guess. "It is a judgment call" is not
+   one of those: make the call, and let the plan commit record it.
+
+   An agent that **dies mid-batch** (stall, API error) is not a blocked batch: do
+   not rewind, do not redo. The worktree is the ground truth — `git log
+   origin/main..HEAD` and `git status` say which tasks landed and what remains.
+   Re-dispatch the remainder with that state spelled out. This recovery is what
+   1 task = 1 commit buys; protect it by forbidding amend and rebase in every
+   dispatch.
 10. **Final review** — dispatch `pipeline-final-review`. It tags findings `fix`
     or `supervisor`: apply the first, take the second to the supervisor. Commit
     and push those fixes, **then** dispatch it again — it reads a committed diff,
@@ -133,7 +152,7 @@ cheap one.
 | Role | Model | Dispatched as |
 |---|---|---|
 | Spec + plan review | current | `pipeline-spec-plan-review` |
-| Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a batch containing a task the plan marks complex |
+| Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a batch containing a task the plan marks complex, and for a batch's third attempt |
 | Final review | opus | `pipeline-final-review` |
 
 This fragment loads into every one of those agents, so it describes the pipeline
