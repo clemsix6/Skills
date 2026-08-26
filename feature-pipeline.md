@@ -23,7 +23,11 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    SHA in the PR body under `Docs`. It is the baseline the final review measures
    drift against.
 6. **Plan** — see "Plan rules", in `<worktree>/docs/superpowers/plans/`. Batched
-   as usual: a batch goes to one agent whole.
+   as usual: a batch goes to one agent whole. **The execution handoff at the end
+   of `writing-plans` is already answered** — step 9 is this pipeline's subagent
+   execution. Never put that choice to the supervisor, and never hand over to
+   `executing-plans` or `subagent-driven-development`: SDD's per-task loop,
+   ledger and review protocol would replace steps 9-10 wholesale.
 7. **Spec and plan review** — dispatch `pipeline-spec-plan-review`, on the two
    documents together. The only pass before code exists.
 8. **Fix the plan, commit and push it** — whether or not it changed, so the PR's
