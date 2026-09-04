@@ -173,31 +173,32 @@ what one of them acts on.
 - **Model aliases** resolve through the environment: `sonnet` in a definition
   means whatever `ANTHROPIC_DEFAULT_SONNET_MODEL` names for that session. That
   is how the same definitions run on the vendor's models under one alias and on
-  a third-party pair under another (see "Two-tier sessions").
+  a third-party pair under another (see "The lab runner").
 
-## Two-tier sessions
+## The lab runner
 
 A session can run on two models: the main thread on a strong one, the `sonnet`
-tier on a lighter one that is several times cheaper. `pipeline-implement` and
-`implement` are declared `sonnet`, the reviews `inherit` or `opus`, so the
-split is already in the definitions — what a session chooses is what the
-aliases mean.
+and `haiku` tiers on a lighter one several times cheaper. `pipeline-implement`
+and `implement` are declared `sonnet`, a browser driver like socialflow's
+`capture` agent `haiku`, the reviews `inherit` or `opus` — the split is already
+in the definitions; what a session chooses is what the aliases mean.
 
-Two pieces make the split hold outside the pipeline, where nothing otherwise
-tells the main thread to delegate:
+The pair has one job: a project's `lab/` (socialflow's, today), where a GLM
+thread captures, replays, reverses and measures, and hands off to Claude Opus
+through a document. Two pieces:
 
-- **`glm-delegation.md`** — appended to the system prompt with
-  `--append-system-prompt-file`. It states the rule: the main thread reads,
-  diagnoses, decides and reviews; every code change goes through `implement`;
-  prose stays with the thread.
-- **`hooks/delegate-edits.py`** — a `PreToolUse` hook that refuses
-  `Edit`/`Write`/`MultiEdit`/`NotebookEdit` on a code file from the main thread,
-  with that same instruction as the reason. It is inert unless the session
-  exports `CLAUDE_DELEGATE_EDITS=1`, and it lets subagents through (their calls
-  carry `agent_id`). Markdown, text, anything under `docs/`, and the scratch
-  locations briefs and reports go to are never refused. It does not see a
-  `sed` or a heredoc run through `Bash`; the fragment tells the model not to
-  route around it, and that part is a prompt constraint.
+- **`glm-lab.md`** — appended to the system prompt with
+  `--append-system-prompt-file`. The thread writes its own probes, journal and
+  state; dispatches `implement` for anything larger than a probe and `capture`
+  for every browser session; never writes under the product's directories.
+- **`hooks/delegate-edits.py`** — a `PreToolUse` hook for a session that must
+  not write code at all: it refuses `Edit`/`Write`/`MultiEdit`/`NotebookEdit`
+  on a code file from the main thread and tells it to dispatch `implement`.
+  Inert unless the session exports `CLAUDE_DELEGATE_EDITS=1`; subagents pass
+  (their calls carry `agent_id`), and so do Markdown, text, anything under
+  `docs/` and the scratch locations briefs and reports go to. It does not see
+  a `sed` or a heredoc run through `Bash`. The lab runner does not set it —
+  the lab writes — but a review or triage thread on a light model can.
 
 Register the hook once per machine, user scope, next to the `SessionStart`
 hook above:
@@ -211,8 +212,9 @@ hook above:
 ]
 ```
 
-A two-tier alias then looks like this — the vendor alias (`cc`) sets none of
-it and is untouched:
+The lab alias — the vendor alias (`cc`) sets none of it and is untouched.
+`--disallowedTools mcp__capture` keeps the browser away from the main thread,
+so only the `capture` agent drives it:
 
 ```bash
 alias glm='ANTHROPIC_BASE_URL=<anthropic-compatible endpoint> \
@@ -220,8 +222,8 @@ ANTHROPIC_AUTH_TOKEN=<key> \
 ANTHROPIC_DEFAULT_OPUS_MODEL="<strong model>[1m]" \
 ANTHROPIC_DEFAULT_SONNET_MODEL="<light model>[1m]" \
 ANTHROPIC_DEFAULT_HAIKU_MODEL="<light model>[1m]" \
-CLAUDE_DELEGATE_EDITS=1 \
-claude --dangerously-skip-permissions --append-system-prompt-file ~/Skills/glm-delegation.md'
+claude --dangerously-skip-permissions --disallowedTools mcp__capture \
+  --append-system-prompt-file ~/Skills/glm-lab.md'
 ```
 
 The `[1m]` suffix matters for a model Claude Code does not know: without it
