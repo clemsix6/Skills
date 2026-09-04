@@ -101,6 +101,7 @@ needs no `.claude/agents/` of its own and every project gets them at once.
 | `pipeline-batch-review` | inherit | high | Reviews the diff of a batch the plan marks `review`, before the rest of the feature builds on it |
 | `pipeline-implement` | sonnet | inherit | Implements one batch whole, reading the plan and spec from the repo itself |
 | `pipeline-final-review` | opus | max | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
+| `implement` | sonnet | inherit | Implements one decided change outside the pipeline — a fix, a small change — from the exact change and the verification commands it is given; no commit |
 
 Effort follows how much each pass holds at once: the final review sees the whole
 feature and the whole diff, so it runs at `max`; the two earlier gates read two
@@ -167,8 +168,66 @@ what one of them acts on.
   Hitting the session cap produces an error telling the caller to do the work
   itself — the pipeline says to take that to the supervisor instead.
 - **Effort** is frontmatter-only, with no dispatch-time equivalent. `model` can
-  be set at either, and the dispatch parameter wins — except against
-  `CLAUDE_CODE_SUBAGENT_MODEL`, which beats both.
+  be set at either, and the dispatch parameter wins; `CLAUDE_CODE_SUBAGENT_MODEL`
+  only fills in when neither is set (since 2.1.251 — before that it beat both).
+- **Model aliases** resolve through the environment: `sonnet` in a definition
+  means whatever `ANTHROPIC_DEFAULT_SONNET_MODEL` names for that session. That
+  is how the same definitions run on the vendor's models under one alias and on
+  a third-party pair under another (see "Two-tier sessions").
+
+## Two-tier sessions
+
+A session can run on two models: the main thread on a strong one, the `sonnet`
+tier on a lighter one that is several times cheaper. `pipeline-implement` and
+`implement` are declared `sonnet`, the reviews `inherit` or `opus`, so the
+split is already in the definitions — what a session chooses is what the
+aliases mean.
+
+Two pieces make the split hold outside the pipeline, where nothing otherwise
+tells the main thread to delegate:
+
+- **`glm-delegation.md`** — appended to the system prompt with
+  `--append-system-prompt-file`. It states the rule: the main thread reads,
+  diagnoses, decides and reviews; every code change goes through `implement`;
+  prose stays with the thread.
+- **`hooks/delegate-edits.py`** — a `PreToolUse` hook that refuses
+  `Edit`/`Write`/`MultiEdit`/`NotebookEdit` on a code file from the main thread,
+  with that same instruction as the reason. It is inert unless the session
+  exports `CLAUDE_DELEGATE_EDITS=1`, and it lets subagents through (their calls
+  carry `agent_id`). Markdown, text, anything under `docs/`, and the scratch
+  locations briefs and reports go to are never refused. It does not see a
+  `sed` or a heredoc run through `Bash`; the fragment tells the model not to
+  route around it, and that part is a prompt constraint.
+
+Register the hook once per machine, user scope, next to the `SessionStart`
+hook above:
+
+```json
+"PreToolUse": [
+  {
+    "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+    "hooks": [{ "type": "command", "command": "\"$HOME/Skills/hooks/delegate-edits.py\"" }]
+  }
+]
+```
+
+A two-tier alias then looks like this — the vendor alias (`cc`) sets none of
+it and is untouched:
+
+```bash
+alias glm='ANTHROPIC_BASE_URL=<anthropic-compatible endpoint> \
+ANTHROPIC_AUTH_TOKEN=<key> \
+ANTHROPIC_DEFAULT_OPUS_MODEL="<strong model>[1m]" \
+ANTHROPIC_DEFAULT_SONNET_MODEL="<light model>[1m]" \
+ANTHROPIC_DEFAULT_HAIKU_MODEL="<light model>[1m]" \
+CLAUDE_DELEGATE_EDITS=1 \
+claude --dangerously-skip-permissions --append-system-prompt-file ~/Skills/glm-delegation.md'
+```
+
+The `[1m]` suffix matters for a model Claude Code does not know: without it
+the context window is assumed to be 200k and compaction fires five times too
+early; with it the suffix is stripped before the request and the window is
+taken as one million.
 
 ## Rules of this repo
 
