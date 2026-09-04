@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""PreToolUse hook: in a two-tier session, the main thread does not write code.
+"""PreToolUse hook: in a session that must not write code, the main thread does not.
 
-Inert unless the session was started with CLAUDE_DELEGATE_EDITS=1 (the `glm`
-alias sets it; `cc` never does). Inside a subagent the call is allowed. On the
-main thread, an Edit/Write/MultiEdit/NotebookEdit on anything but prose is
-refused (exit 2) with the instruction to dispatch the `implement` agent — the
-same rule glm-delegation.md states.
+Inert unless the session was started with CLAUDE_DELEGATE_EDITS=1 — no alias
+sets it today; a review or triage thread on a light model can. Inside a
+subagent the call is allowed. On the main thread, an Edit/Write/MultiEdit/
+NotebookEdit on anything but prose is refused (exit 2) with the instruction to
+dispatch the `implement` agent.
 
 Prose is free: Markdown and text files, anything under a docs/ directory, and
 the scratch locations a thread writes its briefs and reports to.
