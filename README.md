@@ -212,9 +212,23 @@ hook above:
 ]
 ```
 
-The lab alias — the vendor alias (`cc`) sets none of it and is untouched.
-`--disallowedTools mcp__capture` keeps the browser away from the main thread,
-so only the `capture` agent drives it:
+- **`hooks/capture-agent-only.py`** — a `PreToolUse` hook that refuses any
+  `mcp__capture__*` tool on the main thread and lets the `capture` subagent
+  through, so only the agent drives the browser. Armed by
+  `CLAUDE_CAPTURE_AGENT_ONLY=1`, which the lab runner sets. It exists because
+  `--disallowedTools mcp__capture` was measured to strip the tools from
+  subagents too (4 September 2026). Register it next to the edit hook:
+
+```json
+"PreToolUse": [
+  {
+    "matcher": "mcp__capture__.*",
+    "hooks": [{ "type": "command", "command": "\"$HOME/Skills/hooks/capture-agent-only.py\"" }]
+  }
+]
+```
+
+The lab alias — the vendor alias (`cc`) sets none of it and is untouched:
 
 ```bash
 alias glm='ANTHROPIC_BASE_URL=<anthropic-compatible endpoint> \
@@ -222,8 +236,8 @@ ANTHROPIC_AUTH_TOKEN=<key> \
 ANTHROPIC_DEFAULT_OPUS_MODEL="<strong model>[1m]" \
 ANTHROPIC_DEFAULT_SONNET_MODEL="<light model>[1m]" \
 ANTHROPIC_DEFAULT_HAIKU_MODEL="<light model>[1m]" \
-claude --dangerously-skip-permissions --disallowedTools mcp__capture \
-  --append-system-prompt-file ~/Skills/glm-lab.md'
+CLAUDE_CAPTURE_AGENT_ONLY=1 \
+claude --dangerously-skip-permissions --append-system-prompt-file ~/Skills/glm-lab.md'
 ```
 
 The `[1m]` suffix matters for a model Claude Code does not know: without it

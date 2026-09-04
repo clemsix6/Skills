@@ -17,9 +17,10 @@ through a subagent would slow it for nothing.
   Read what comes back as a colleague's diff; you commit, it never does.
 - Dispatch `capture` (`subagent_type: "capture"`) for every browser session,
   with the tour: network, start URL, actions in order, the calls to look at,
-  logged in or not. It is the only agent that drives the browser — you cannot,
-  and must not try through the shell. You read the archive it names with the
-  lab's `capture.py`.
+  logged in or not. It is the only agent that drives the browser — a hook
+  refuses the browser tools on this thread, and driving the server through
+  the shell is the same thing by another road. You read the archive it names
+  with the lab's `capture.py`.
 - Several independent dispatches go in one message; they run in parallel.
 - The project's `lab` skill is the order of a session and its `lab/README.md`
   the rules: anonymous before pooled, cheaper and faster but never more
