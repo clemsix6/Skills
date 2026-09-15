@@ -1,0 +1,391 @@
+#!/usr/bin/env bash
+#
+# po - talk to the Hermes PO (product owner) from a Claude Code session, at
+# the fixed points of the feature pipeline (see kanban-tickets.md).
+#
+# Usage:
+#   po <event> --project <tenant> [--epic <t_xxx>] [--author <author>]
+#      [--title "<title>"] [--body-file <path>]
+#   (body read from stdin when --body-file is not given)
+#
+# Run `po --help` for the full reference.
+#
+# Transport: ssh to $PO_SSH_HOST (default "hermes-po") by default.
+# PO_TRANSPORT=direct opts into calling a local `hermes` binary instead —
+# a host merely having `hermes` in $PATH is not enough, since that could be
+# an unrelated local tool; direct is opt-in only, set by whatever actually
+# hosts Hermes (e.g. a small wrapper on the server, ahead of `po` on PATH).
+#
+# Written for bash 3.2 (macOS system bash) as well as newer bash on the
+# server. No dependency beyond bash, ssh and standard coreutils.
+
+set -u
+
+PO_TIMEOUT_SECS=240
+PO_EVENTS="open plan batch blocked adjust issues review abandon ask"
+
+po_err() {
+    printf 'po: %s\n' "$1" >&2
+}
+
+po_usage() {
+    cat <<'EOF' >&2
+Usage: po <event> --project <tenant> [--epic <t_xxx>] [--author <author>]
+          [--title "<title>"] [--body-file <path>]
+
+Run `po --help` for the full reference.
+EOF
+}
+
+po_help() {
+    cat <<EOF
+po - talk to the Hermes PO from a Claude Code session
+
+USAGE
+    po <event> --project <tenant> [--epic <t_xxx>] [--author <author>]
+       [--title "<title>"] [--body-file <path>]
+
+    The body is read from --body-file when given, otherwise from stdin:
+
+        echo "..." | po batch --project truewallet --epic t_abc123
+        po open --project truewallet --title "Broker copy" --body-file spec.md
+
+EVENTS (closed list — an unknown event is rejected before anything is sent)
+    open      open an epic for a new feature (returns its epic id)
+    plan      record the validated batch plan
+    batch     report a pushed batch
+    blocked   report the epic is blocked on a question
+    adjust    record a spec adjustment (autonomous or approved)
+    issues    report out-of-scope findings sent to the backlog
+    review    report the final review verdict / PRs ready
+    abandon   report the epic is abandoned
+    ask       ask the PO a free-form question (no epic required)
+
+OPTIONS
+    --project <tenant>    required. The tenant this event belongs to.
+    --epic <t_xxx>        the epic id. Required for every event except
+                           'open' (which creates one) and 'ask'.
+    --author <name>       who this event is attributed to. Default:
+                           \$PO_AUTHOR, else the lowercase first name from
+                           \`git config user.name\`, else "unknown".
+    --title <text>        the epic's title (~6 words). Required for 'open',
+                           ignored for every other event.
+    --body-file <path>    read the body from this file instead of stdin.
+    -h, --help            show this help and exit.
+
+BODY
+    Free text, one requirement per event — see kanban-tickets.md for what
+    each event's body must contain. Piped on stdin when --body-file is not
+    given; reading from an interactive terminal with neither is a usage
+    error, not a hang.
+
+TRANSPORT
+    SSH by default: the message is sent to \$PO_SSH_HOST (default
+    "hermes-po" — an SSH alias or a plain user@host set up in
+    ~/.ssh/config):
+
+        <message> | ssh "\$PO_SSH_HOST" 'PATH=\$HOME/.local/bin:\$PATH hermes chat --oneshot -Q --query-file -'
+
+    The message is piped to ssh's stdin, which \`--query-file -\` reads
+    directly on the remote side — no local shell variable ever has to hold
+    or re-quote a multi-line string. The PATH prefix is required: a
+    non-interactive SSH shell does not source the login PATH, and \`hermes\`
+    lives in \$HOME/.local/bin on the server.
+
+    Set PO_TRANSPORT=direct to skip ssh and call a local \`hermes\` binary
+    instead:
+
+        <message> | hermes chat --oneshot -Q --query-file -
+
+    This is opt-in only — a \`hermes\` binary merely being present in \$PATH
+    is never enough, since it could be an unrelated local tool with the same
+    name. A host that actually runs Hermes (missions on the server) sets
+    PO_TRANSPORT=direct itself, usually via a small wrapper ahead of \`po\`
+    on \$PATH. PO_TRANSPORT=direct with no \`hermes\` in \$PATH is a hard
+    failure, not a silent fallback to ssh: message on stderr, exit 1, before
+    any connection is attempted.
+
+    Both transports invoke \`hermes chat\` with \`-Q\` (quiet/programmatic
+    output), whose first output line is always \`session_id: <id>\`. \`po\`
+    strips that line before printing anything, so stdout carries Hermes'
+    reply and nothing else. Set PO_VERBOSE=1 to send the stripped line to
+    stderr instead of discarding it.
+
+    The whole transport is aborted if Hermes has not replied within ${PO_TIMEOUT_SECS}s.
+
+OUTPUT
+    On success, Hermes' reply is printed verbatim to stdout, ending with a
+    line "epic: t_xxx" (the id \`po open\` just created, or the id you passed
+    in for every other event) — reuse it in the next \`po\` call for this
+    feature. Exit 0.
+
+    On transport failure or timeout, a message goes to stderr and nothing is
+    printed to stdout. Exit 1. A failed \`po\` never blocks the work that
+    calls it: note it (e.g. in the PR body) and continue.
+
+    A usage error (bad flags, missing --epic, unknown event, empty body) is
+    caught before anything is sent: message on stderr, exit 2.
+
+ENVIRONMENT
+    PO_TRANSPORT   "direct" to call a local \`hermes\` binary instead of
+                   ssh. Any other value, or unset, means ssh. Default:
+                   unset (ssh).
+    PO_SSH_HOST    SSH destination for the ssh transport (alias or
+                   user@host). Default: hermes-po.
+    PO_AUTHOR      default --author when the flag is not given.
+    PO_DRY_RUN     when set to 1, print the composed message to stdout
+                   instead of sending it, and exit 0. Nothing reaches
+                   Hermes.
+    PO_VERBOSE     when set to 1, print the \`session_id: ...\` line
+                   stripped from Hermes' \`-Q\` output to stderr instead of
+                   discarding it.
+
+EXIT CODES
+    0   response received (or PO_DRY_RUN printed the message)
+    1   transport failure or timeout
+    2   usage error (nothing was sent)
+EOF
+}
+
+# ---- argument parsing --------------------------------------------------
+
+if [ "$#" -eq 0 ]; then
+    po_usage
+    exit 2
+fi
+
+case "$1" in
+    -h|--help)
+        po_help
+        exit 0
+        ;;
+esac
+
+EVENT="$1"
+shift
+
+PROJECT=""
+EPIC=""
+AUTHOR_FLAG=""
+TITLE=""
+BODY_FILE=""
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --project)
+            if [ "$#" -lt 2 ]; then po_err "--project requires a value"; exit 2; fi
+            PROJECT="$2"; shift 2 ;;
+        --epic)
+            if [ "$#" -lt 2 ]; then po_err "--epic requires a value"; exit 2; fi
+            EPIC="$2"; shift 2 ;;
+        --author)
+            if [ "$#" -lt 2 ]; then po_err "--author requires a value"; exit 2; fi
+            AUTHOR_FLAG="$2"; shift 2 ;;
+        --title)
+            if [ "$#" -lt 2 ]; then po_err "--title requires a value"; exit 2; fi
+            TITLE="$2"; shift 2 ;;
+        --body-file)
+            if [ "$#" -lt 2 ]; then po_err "--body-file requires a value"; exit 2; fi
+            BODY_FILE="$2"; shift 2 ;;
+        -h|--help)
+            po_help
+            exit 0
+            ;;
+        *)
+            po_err "unknown option: $1"
+            po_usage
+            exit 2
+            ;;
+    esac
+done
+
+# ---- validation ---------------------------------------------------------
+
+case " $PO_EVENTS " in
+    *" $EVENT "*) ;;
+    *)
+        po_err "unknown event: $EVENT (expected one of: $PO_EVENTS)"
+        exit 2
+        ;;
+esac
+
+if [ -z "$PROJECT" ]; then
+    po_err "--project <tenant> is required"
+    exit 2
+fi
+
+case "$EVENT" in
+    open|ask) ;;
+    *)
+        if [ -z "$EPIC" ]; then
+            po_err "--epic <t_xxx> is required for event '$EVENT'"
+            exit 2
+        fi
+        ;;
+esac
+
+if [ "$EVENT" = "open" ] && [ -z "$TITLE" ]; then
+    po_err "--title is required for event 'open'"
+    exit 2
+fi
+
+if [ "$EVENT" = "open" ] && [ -n "$TITLE" ]; then
+    title_words=$(printf '%s\n' "$TITLE" | wc -w | tr -d ' ')
+    if [ "$title_words" -gt 8 ]; then
+        po_err "warning: --title is $title_words words, aim for ~6"
+    fi
+fi
+
+# ---- body ----------------------------------------------------------------
+
+if [ -n "$BODY_FILE" ]; then
+    if [ ! -r "$BODY_FILE" ]; then
+        po_err "cannot read --body-file: $BODY_FILE"
+        exit 2
+    fi
+    BODY=$(cat "$BODY_FILE")
+else
+    if [ -t 0 ]; then
+        po_err "no body given: pipe one on stdin or pass --body-file <path>"
+        exit 2
+    fi
+    BODY=$(cat)
+fi
+
+if [ -z "$(printf '%s' "$BODY" | tr -d '[:space:]')" ]; then
+    po_err "the body is empty"
+    exit 2
+fi
+
+# ---- author ---------------------------------------------------------------
+
+resolve_author() {
+    if [ -n "$AUTHOR_FLAG" ]; then
+        printf '%s' "$AUTHOR_FLAG"
+        return
+    fi
+    if [ -n "${PO_AUTHOR:-}" ]; then
+        printf '%s' "$PO_AUTHOR"
+        return
+    fi
+    gitname=$(git config user.name 2>/dev/null)
+    if [ -n "$gitname" ]; then
+        first=$(printf '%s' "$gitname" | awk '{print $1}')
+        if [ -n "$first" ]; then
+            printf '%s' "$first" | tr '[:upper:]' '[:lower:]'
+            return
+        fi
+    fi
+    printf 'unknown'
+}
+
+AUTHOR=$(resolve_author)
+
+# ---- compose the message ---------------------------------------------------
+
+EPIC_DISPLAY="${EPIC:--}"
+NL="
+"
+MESSAGE="[po] event=${EVENT} project=${PROJECT} epic=${EPIC_DISPLAY} author=${AUTHOR}"
+if [ "$EVENT" = "open" ]; then
+    MESSAGE="${MESSAGE}${NL}title: ${TITLE}"
+fi
+MESSAGE="${MESSAGE}${NL}${NL}${BODY}"
+
+if [ "${PO_DRY_RUN:-}" = "1" ]; then
+    printf '%s\n' "$MESSAGE"
+    exit 0
+fi
+
+# ---- transport --------------------------------------------------------------
+
+resolve_ssh_host() {
+    if [ -n "${PO_SSH_HOST:-}" ]; then
+        printf '%s' "$PO_SSH_HOST"
+    else
+        printf '%s' "hermes-po"
+    fi
+}
+
+po_send_direct() {
+    printf '%s' "$MESSAGE" | hermes chat --oneshot -Q --query-file -
+}
+
+po_send_ssh() {
+    host=$(resolve_ssh_host)
+    printf '%s' "$MESSAGE" | ssh "$host" 'PATH=$HOME/.local/bin:$PATH hermes chat --oneshot -Q --query-file -'
+}
+
+# ssh is the default transport. Direct calls to a local `hermes` binary are
+# opt-in only (PO_TRANSPORT=direct): a `hermes` merely being on PATH is not
+# proof it is the Hermes PO — it could be an unrelated personal tool — so it
+# is never picked up implicitly.
+TRANSPORT="${PO_TRANSPORT:-ssh}"
+
+case "$TRANSPORT" in
+    direct)
+        if ! command -v hermes >/dev/null 2>&1; then
+            po_err "PO_TRANSPORT=direct but no 'hermes' binary found in \$PATH"
+            exit 1
+        fi
+        ;;
+    ssh) ;;
+    *)
+        po_err "invalid PO_TRANSPORT: $TRANSPORT (expected 'direct', or unset for ssh)"
+        exit 2
+        ;;
+esac
+
+OUT_FILE=$(mktemp "${TMPDIR:-/tmp}/po.out.XXXXXX")
+ERR_FILE=$(mktemp "${TMPDIR:-/tmp}/po.err.XXXXXX")
+trap 'rm -f "$OUT_FILE" "$ERR_FILE"' EXIT
+
+# No timeout(1) on macOS: emulate it in pure bash. `set -m` gives the
+# backgrounded job its own process group (pgid == its own pid), so killing
+# "-$CMD_PID" (negative pid = kill the whole group) reaches ssh/hermes and
+# not just the wrapper shell around them.
+set -m 2>/dev/null
+
+if [ "$TRANSPORT" = "direct" ]; then
+    po_send_direct >"$OUT_FILE" 2>"$ERR_FILE" &
+else
+    po_send_ssh >"$OUT_FILE" 2>"$ERR_FILE" &
+fi
+CMD_PID=$!
+
+(
+    sleep "$PO_TIMEOUT_SECS"
+    kill -TERM -- "-$CMD_PID" 2>/dev/null
+) &
+WATCHER_PID=$!
+
+wait "$CMD_PID" 2>/dev/null
+STATUS=$?
+
+kill "$WATCHER_PID" 2>/dev/null
+wait "$WATCHER_PID" 2>/dev/null
+
+RESPONSE=$(cat "$OUT_FILE" 2>/dev/null)
+ERR_OUTPUT=$(cat "$ERR_FILE" 2>/dev/null)
+
+if [ "$STATUS" -eq 0 ]; then
+    # `-Q` always opens with a "session_id: ..." line ahead of the actual
+    # reply; keep it out of stdout so callers get Hermes' answer verbatim.
+    case "$RESPONSE" in
+        session_id:*)
+            SESSION_LINE=$(printf '%s\n' "$RESPONSE" | head -n 1)
+            RESPONSE=$(printf '%s\n' "$RESPONSE" | tail -n +2)
+            [ "${PO_VERBOSE:-}" = "1" ] && printf '%s\n' "$SESSION_LINE" >&2
+            ;;
+    esac
+    printf '%s\n' "$RESPONSE"
+    exit 0
+fi
+
+if [ "$STATUS" -eq 143 ]; then
+    po_err "timed out after ${PO_TIMEOUT_SECS}s waiting for a response from Hermes"
+else
+    po_err "transport failed (exit $STATUS)"
+fi
+[ -n "$ERR_OUTPUT" ] && printf '%s\n' "$ERR_OUTPUT" >&2
+exit 1

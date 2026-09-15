@@ -35,9 +35,13 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    reviewed on its own; the review at step 7 covers it.
 4. **Spec summary to the supervisor** — the only point where a human approves the
    work, and the one that seals the scope. Nothing is built until they accept it.
+   Once approved, call `po open` (see kanban-tickets.md for the body it needs)
+   and keep the `epic:` id it returns — every `po` call for this feature
+   carries it, and so does every PR the feature opens.
 5. **Commit the approved spec, push, open the draft PR** — record that commit's
-   SHA in the PR body under `Docs`. It is the baseline the final review measures
-   drift against.
+   SHA in the PR body under `Docs`, and `Issue: t_xxx` (the id from step 4) at
+   the top of the body. It is the baseline the final review measures drift
+   against.
 6. **Plan** — see "Plan rules", in `<worktree>/docs/superpowers/plans/`. Batched
    as usual: a batch goes to one agent whole. **The execution handoff at the end
    of `writing-plans` is already answered** — step 9 is this pipeline's subagent
@@ -49,12 +53,14 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
 8. **Fix the plan, commit and push it** — whether or not it changed, so the PR's
    `Docs` link resolves. Add the `State` checklist to the PR body, one line per
    batch. A finding against the **spec** cannot be fixed here — the supervisor
-   sealed it at step 4, so take it back to them.
+   sealed it at step 4, so take it back to them. Call `po plan` with the batch
+   count and a one-line summary of each.
 9. **Implementation** — dispatch `pipeline-implement` once per batch, in plan
    order, **one batch at a time**, giving it the whole batch including the
    integration task. Pass `model: opus` for a batch containing a task the plan
    marks complex. When the batch comes back clean: push every commit it
-   produced, tick it in `State`, then dispatch the next one.
+   produced, tick it in `State`, call `po batch` with a product summary (never
+   a file list) and the PRs it touched, then dispatch the next one.
 
    **A batch the plan marks `review` is reviewed before it is pushed** —
    dispatch `pipeline-batch-review` on the commits it produced. Findings tagged
@@ -78,7 +84,10 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    Take it to the supervisor only when the fix would change what the end user
    gets — that is the spec, and they sealed it — or when three attempts came back
    blocked, or when every path forward is a guess. "It is a judgment call" is not
-   one of those: make the call, and let the plan commit record it.
+   one of those: make the call, and let the plan commit record it. Whenever it
+   does go to the supervisor, call `po blocked` with the reason and the
+   question first — the next `po batch` or `po adjust` covers the resumption,
+   there is no separate "unblocked" event.
 
    An agent that **dies mid-batch** (stall, API error) is not a blocked batch: do
    not rewind, do not redo. The worktree is the ground truth — `git log
@@ -91,7 +100,18 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
     and push those fixes, **then** dispatch it again — it reads a committed diff,
     so uncommitted work is invisible to it. That second verdict is final; never
     grade your own fix. If it fails, stop and report rather than marking the PR
-    ready. If it passes, mark ready once CI is green.
+    ready. If it passes, mark ready once CI is green. If `Known issues`
+    collected anything along the way, call `po issues` once, here, with the
+    whole list — never once per finding. Then call `po review` with the
+    verdict and the PRs it covers.
+
+If the feature is abandoned instead of finished — at this step or any
+earlier one — call `po abandon` with the reason instead of `po review`.
+
+Every `po` call above can fail — a flaky link, a busy PO. When it does, note
+it in the PR (`Known issues` if nothing more specific fits) and keep going: a
+`po` failure never blocks the feature it reports on. See kanban-tickets.md
+for what each event's body needs and what Hermes does with it.
 
 ### Plan rules (differ from superpowers)
 
@@ -173,11 +193,13 @@ You may adjust the spec autonomously. The line:
 
 - **No** — the mechanism turned out impractical, the observable behaviour is the
   one that was validated. Adjust, commit it separately (`[&]`), add a
-  `Spec adjustments` entry to the PR body.
+  `Spec adjustments` entry to the PR body. Call `po adjust` marked
+  autonomous.
 - **Yes** — a use case disappears, an output format changes, a guarantee drops,
   scope is added. Ask the supervisor. Once approved, record that commit in `Docs`
   as an **additional** approved revision; never replace the original, or every
-  earlier autonomous adjustment silently becomes "approved".
+  earlier autonomous adjustment silently becomes "approved". Call `po adjust`
+  marked approved, with the new scope.
 
 ### Models
 

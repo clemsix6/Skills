@@ -6,7 +6,7 @@ through CLAUDE.md `@` imports (see README.md).
 ## Editing rules
 
 - All content in English.
-- Fragments stay **project-agnostic**: no project names, no Notion IDs, no
+- Fragments stay **project-agnostic**: no project names, no board IDs, no
   hosts, no URLs of internal systems, no credentials. Anything specific belongs
   in the consuming project's CLAUDE.md.
 - One fragment = one theme. New cross-cutting defaults go to `general.md`;

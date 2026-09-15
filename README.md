@@ -70,7 +70,9 @@ Drop `go-style` for non-Go repos. For Rust code, import
 `@~/Skills/rust-style.md` — in a mixed repo, put that line in a
 `CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
 are touched. Projects that keep a graphify knowledge graph also import
-`@~/Skills/graphify.md` (inert when `graphify-out/` is absent).
+`@~/Skills/graphify.md` (inert when `graphify-out/` is absent). Projects with
+a kanban tenant also import `@~/Skills/kanban-tickets.md` and declare
+`tenant`, `workflow` and `label` in their own CLAUDE.md (see that fragment).
 
 Projects the owner directs without reading the code import `@~/Skills/vibe.md`.
 It keeps code out of Claude's replies, so leave it out of any repo whose owner
@@ -86,8 +88,50 @@ reviews diffs.
 | `commit-convention.md` | Commit message format |
 | `git-workflow.md` | Branching model and PR lifecycle |
 | `feature-pipeline.md` | The feature-development pipeline: steps, plan rules, dispatch and scope |
+| `kanban-tickets.md` | Kanban board conventions: the `po` event contract, epic/PR linking (projects with a kanban tenant only) |
 | `graphify.md` | Knowledge-graph usage: query-first, update discipline (projects with a graph only) |
 | `vibe.md` | Tone and formatting: outcome first, plain prose, no code in replies (vibe-coded projects only) |
+
+## PO command (`po`)
+
+`bin/po` sends the feature pipeline's fixed checkpoints (see
+`kanban-tickets.md`) to Hermes' PO over its oneshot channel — spec approved,
+plan validated, batch pushed, blocked, spec adjusted, out-of-scope findings,
+final verdict, abandoned. Install it once per machine, next to the
+`SessionStart` hook above:
+
+```bash
+mkdir -p ~/.local/bin
+ln -sf ~/Skills/bin/po ~/.local/bin/po
+```
+
+`~/.local/bin` must be on `PATH`. By default `po` talks to Hermes over SSH,
+opening a connection to `$PO_SSH_HOST` (default `hermes-po`): an alias the
+admin sets up in `~/.ssh/config`, pointing at the Hermes host with a key it
+authorizes. Without that alias, set `PO_SSH_HOST=user@host` instead.
+
+Direct transport — calling a local `hermes` binary instead of ssh — is
+opt-in only, via `PO_TRANSPORT=direct`: a `hermes` binary merely being on
+`PATH` is never enough on its own, since it could be an unrelated local
+tool. The host that actually hosts Hermes (missions on the server, where
+`po` runs already scoped to that host) installs a small wrapper ahead of
+`po` on `PATH` that does:
+
+```bash
+exec env PO_TRANSPORT=direct <clone>/bin/po "$@"
+```
+
+Usage:
+
+```bash
+po open --project <tenant> --title "..." --body-file spec-summary.txt
+po batch --project <tenant> --epic t_xxx <<'EOF'
+batch 2/4: ...
+EOF
+```
+
+Run `po --help` for the full flag, transport and exit-code reference; set
+`PO_DRY_RUN=1` to see the composed message without sending it.
 
 ## Agents
 
