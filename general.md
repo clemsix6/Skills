@@ -26,6 +26,26 @@ single source of truth, the Justfile is a local convenience alias and CI/Docker
 keep calling the existing source. Do not stack `just` on top of an existing
 centralization just to add a binary.
 
+### Subagent Models (CRUCIAL)
+
+**Never dispatch a subagent on Fable unless the user explicitly asks for it.**
+Pick the model by the kind of work instead:
+
+- **Sonnet** — the default: implementation, exploration, search, running
+  commands, mechanical edits, gathering data.
+- **Opus** — work that needs judgment: code review, planning and design,
+  investigation and debugging, root-cause analysis, arbitrating between options.
+
+- **Set `model` on every dispatch** whose agent definition does not pin one. A
+  definition without `model` and the built-in agents inherit the session's
+  model, so on a Fable session they silently become Fable subagents.
+- **No fork from a Fable session** — a fork always runs on its parent's model
+  and ignores `model`. Dispatch a fresh agent with a written brief instead.
+- **Explicit means the user names Fable** for the work at hand. A hard task, or
+  the session itself running on Fable, is not a request.
+- Applies to every way of spawning an agent: the Agent tool, workflow scripts,
+  teams.
+
 ### Comments Must Not Rot (CRUCIAL)
 
 A comment is written once and read for years while the code under it keeps

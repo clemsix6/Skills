@@ -2,6 +2,7 @@
 name: pipeline-spec-plan-review
 description: Reviews a feature's spec and its implementation plan together, before any code exists — the single pre-implementation gate. Dispatched by the orchestrator once the plan is written. Read-only.
 tools: Read, Grep, Glob, Bash
+model: opus
 effort: high
 color: blue
 ---

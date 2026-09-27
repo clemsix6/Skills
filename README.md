@@ -82,7 +82,7 @@ reviews diffs.
 
 | File | Contents |
 |---|---|
-| `general.md` | Cross-language defaults: command runner (just), comment rules, CLAUDE.md design rules |
+| `general.md` | Cross-language defaults: command runner (just), subagent models, comment rules, CLAUDE.md design rules |
 | `go-style.md` | Go coding standards |
 | `rust-style.md` | Rust coding standards |
 | `commit-convention.md` | Commit message format |
@@ -141,8 +141,8 @@ needs no `.claude/agents/` of its own and every project gets them at once.
 
 | Definition | Model | Effort | Role |
 |---|---|---|---|
-| `pipeline-spec-plan-review` | inherit | high | Reviews spec and plan together — the only gate before code exists |
-| `pipeline-batch-review` | inherit | high | Reviews the diff of a batch the plan marks `review`, before the rest of the feature builds on it |
+| `pipeline-spec-plan-review` | opus | high | Reviews spec and plan together — the only gate before code exists |
+| `pipeline-batch-review` | opus | high | Reviews the diff of a batch the plan marks `review`, before the rest of the feature builds on it |
 | `pipeline-implement` | sonnet | inherit | Implements one batch whole, reading the plan and spec from the repo itself |
 | `pipeline-final-review` | opus | max | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
 | `implement` | sonnet | inherit | Implements one decided change outside the pipeline — a fix, a small change — from the exact change and the verification commands it is given; no commit |
@@ -151,9 +151,9 @@ Effort follows how much each pass holds at once: the final review sees the whole
 feature and the whole diff, so it runs at `max`; the two earlier gates read two
 documents and one batch's diff.
 
-Neither gate pins a model, on purpose — both inherit the session's, so a session
-running on the strong model gets strong gates and one deliberately running cheap
-is not dragged back up.
+Every definition pins its model, because `inherit` hands a subagent the
+session's model — a Fable subagent on a Fable session, which `general.md`
+forbids unless the user asks. Reviews pin `opus`, implementation `sonnet`.
 
 `pipeline-batch-review` is the only conditional agent: it is dispatched for a
 batch the plan marks `review` and for no other. The mark is a plan-level
@@ -224,7 +224,7 @@ what one of them acts on.
 A session can run on two models: the main thread on a strong one, the `sonnet`
 and `haiku` tiers on a lighter one several times cheaper. `pipeline-implement`
 and `implement` are declared `sonnet`, a browser driver like socialflow's
-`capture` agent `haiku`, the reviews `inherit` or `opus` — the split is already
+`capture` agent `haiku`, the reviews `opus` — the split is already
 in the definitions; what a session chooses is what the aliases mean.
 
 The pair has one job: a project's `lab/` (socialflow's, today), where a GLM

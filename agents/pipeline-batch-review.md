@@ -2,6 +2,7 @@
 name: pipeline-batch-review
 description: Reviews the diff of a freshly implemented batch that the rest of the feature will build on, before it is pushed. Dispatched by the orchestrator for a batch the plan marks `review`, and again after its fix round. Read-only.
 tools: Read, Grep, Glob, Bash
+model: opus
 effort: high
 color: orange
 ---

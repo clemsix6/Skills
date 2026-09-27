@@ -203,13 +203,12 @@ You may adjust the spec autonomously. The line:
 
 ### Models
 
-Review on the strong model where the whole feature is at stake, execution on the
-cheap one.
+Every review on Opus, execution on Sonnet — never Fable (see `general.md`).
 
 | Role | Model | Dispatched as |
 |---|---|---|
-| Spec + plan review | current | `pipeline-spec-plan-review` |
-| Batch review, marked batches only | current | `pipeline-batch-review` |
+| Spec + plan review | opus | `pipeline-spec-plan-review` |
+| Batch review, marked batches only | opus | `pipeline-batch-review` |
 | Implementation | sonnet | `pipeline-implement`; pass `model: opus` for a batch containing a task the plan marks complex, and for a batch's third attempt |
 | Final review | opus | `pipeline-final-review` |
 
