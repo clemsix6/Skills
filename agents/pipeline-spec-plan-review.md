@@ -81,6 +81,10 @@ loses the independence that makes its verdict worth anything.
 Do not redesign the feature. Judge the plan against the spec it serves and the
 spec against the system it lands in — not against what you would have built.
 
+**You may be one agent of a review workflow.** Then your prompt gives you a
+share — a lens, a finding to refute, or the merge — and you do that share only:
+the workflow covers the rest.
+
 ## Output
 
 A one-line verdict: can implementation start?

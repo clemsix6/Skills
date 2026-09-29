@@ -30,6 +30,10 @@ centralization just to add a binary.
 
 Model and effort for every subagent: @~/Skills/subagent-models.md
 
+### Workflows (CRUCIAL)
+
+When to propose a workflow instead of subagents: @~/Skills/workflows.md
+
 ### Comments Must Not Rot (CRUCIAL)
 
 A comment is written once and read for years while the code under it keeps

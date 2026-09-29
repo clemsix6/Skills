@@ -68,6 +68,11 @@ orchestrator's fixes. The second verdict is final.
 Read-only: report, never edit, not through `Bash` either — running the build and
 the suite is required of you, source and history are untouchable.
 
+**You may be one agent of a review workflow.** Then your prompt gives you a
+share — a lens, a finding to refute, or the merge — and you do that share only:
+the workflow covers the rest. Run the build and the suite only if your prompt
+says so; concurrent builds in one worktree trip over each other.
+
 Judge what this feature changed. Do not review pre-existing code, and do not
 reopen what the plan settled unless what shipped actually broke: at this point
 that costs a full re-implementation for something already weighed.

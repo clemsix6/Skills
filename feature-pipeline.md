@@ -35,6 +35,10 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    reviewed on its own; the review at step 7 covers it.
 4. **Spec summary to the supervisor** — the only point where a human approves the
    work, and the one that seals the scope. Nothing is built until they accept it.
+   When the feature is big enough that one reviewer could not read all of it
+   closely, or a defect missed at review would be costly, offer in the same
+   message to run steps 7 and 10 as workflows (see "Review workflows"). The
+   answer covers this feature; without a yes, both are single dispatches.
    Once approved, call `po open` (see kanban-tickets.md for the body it needs)
    and keep the `epic:` id it returns — every `po` call for this feature
    carries it, and so does every PR the feature opens.
@@ -49,7 +53,8 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    `executing-plans` or `subagent-driven-development`: SDD's per-task loop,
    ledger and review protocol would replace steps 9-10 wholesale.
 7. **Spec and plan review** — dispatch `pipeline-spec-plan-review`, on the two
-   documents together. The only pass before code exists.
+   documents together, as a review workflow if the supervisor accepted one at
+   step 4. The only pass before code exists.
 8. **Fix the plan, commit and push it** — whether or not it changed, so the PR's
    `Docs` link resolves. Add the `State` checklist to the PR body, one line per
    batch. A finding against the **spec** cannot be fixed here — the supervisor
@@ -95,15 +100,16 @@ The project CLAUDE.md may add steps or override the task-workspace pattern.
    Re-dispatch the remainder with that state spelled out. This recovery is what
    1 task = 1 commit buys; protect it by forbidding amend and rebase in every
    dispatch.
-10. **Final review** — dispatch `pipeline-final-review`. It tags findings `fix`
-    or `supervisor`: apply the first, take the second to the supervisor. Commit
-    and push those fixes, **then** dispatch it again — it reads a committed diff,
-    so uncommitted work is invisible to it. That second verdict is final; never
-    grade your own fix. If it fails, stop and report rather than marking the PR
-    ready. If it passes, mark ready once CI is green. If `Known issues`
-    collected anything along the way, call `po issues` once, here, with the
-    whole list — never once per finding. Then call `po review` with the
-    verdict and the PRs it covers.
+10. **Final review** — dispatch `pipeline-final-review`, as a review workflow if
+    the supervisor accepted one at step 4. It tags findings `fix` or
+    `supervisor`: apply the first, take the second to the supervisor. Commit and
+    push those fixes, **then** dispatch it again, in the same form — it reads a
+    committed diff, so uncommitted work is invisible to it. That second verdict
+    is final; never grade your own fix. If it fails, stop and report rather than
+    marking the PR ready. If it passes, mark ready once CI is green. If
+    `Known issues` collected anything along the way, call `po issues` once,
+    here, with the whole list — never once per finding. Then call `po review`
+    with the verdict and the PRs it covers.
 
 If the feature is abandoned instead of finished — at this step or any
 earlier one — call `po abandon` with the reason instead of `po review`.
@@ -143,13 +149,33 @@ for what each event's body needs and what Hermes does with it.
 
 ### Dispatch
 
-**Every prompt carries the absolute worktree path.** A subagent starts in the
-main checkout, so a relative path reads the wrong tree and commits to the wrong
-branch. Beyond that, supply what the target definition's "What you are given"
-asks for.
+**Every prompt carries the absolute worktree path**, each `agent()` prompt of a
+review workflow included. A subagent starts in the main checkout, so a relative
+path reads the wrong tree and commits to the wrong branch. Beyond that, supply
+what the target definition's "What you are given" asks for.
 
 Pass **pointers, never content**: which task, where the plan and spec live. An
 agent that reads the source itself cannot be handed a lossy summary of it.
+
+### Review workflows
+
+When the supervisor accepted them at step 4, the spec-and-plan review and the
+final review each run as a workflow instead of a single dispatch. Same gate,
+same output — nothing downstream can tell the difference:
+
+1. **Find** — one agent per lens, the lenses drawn from the definition's "What
+   matters here".
+2. **Verify** — each finding goes to an agent told to refute it against the
+   documents and the code. Drop only what it shows to be wrong: an uncertain
+   finding survives, because a false alarm costs a ruling and a dropped defect
+   ships.
+3. **Merge** — one agent dedupes the survivors and writes the definition's
+   output, verdict first.
+
+Every agent runs as the gate's own definition (`agentType`), so each keeps its
+protocol, its model and the read-only constraint. In the final review exactly
+one agent runs the build and the suite: concurrent builds in one worktree trip
+over each other.
 
 ### What comes back
 

@@ -82,8 +82,9 @@ reviews diffs.
 
 | File | Contents |
 |---|---|
-| `general.md` | Cross-language defaults: command runner (just), comment rules, CLAUDE.md design rules; imports `subagent-models.md` |
+| `general.md` | Cross-language defaults: command runner (just), comment rules, CLAUDE.md design rules; imports `subagent-models.md` and `workflows.md` |
 | `subagent-models.md` | Which model and effort each subagent gets, in a pipeline or not — loaded through `general.md`, never imported directly |
+| `workflows.md` | When a workflow beats subagents, and how to offer one — loaded through `general.md`, never imported directly |
 | `go-style.md` | Go coding standards |
 | `rust-style.md` | Rust coding standards |
 | `commit-convention.md` | Commit message format |
@@ -203,7 +204,8 @@ what one of them acts on.
 
 - **Nesting.** The pipeline is two levels: session → reviewer or implementation
   agent. That is one subagent layer, well inside the default spawn depth of
-  three (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`).
+  three (`CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`). A review workflow's agents
+  sit on that same layer: the script is not an agent.
 - **`background`.** Subagents run in the background by default; the platform
   moves one to the foreground when its caller needs the result before continuing.
   No definition sets the field: the background filter strips built-in tools, but
@@ -212,7 +214,9 @@ what one of them acts on.
 - **Withholding `Agent`.** Use an explicit `tools` list or `disallowedTools`;
   the `Agent(type)` allowlist syntax has no effect inside a subagent definition.
 - **Caps.** 200 subagents per session, 20 concurrent. The pipeline dispatches
-  one agent at a time and a feature costs a handful in total, so neither binds.
+  one agent at a time and a feature costs a handful in total, so neither binds;
+  review workflows add a few dozen at most, run under the Workflow runtime's
+  own concurrency limit.
   Hitting the session cap produces an error telling the caller to do the work
   itself — the pipeline says to take that to the supervisor instead.
 - **Effort** has no Agent-tool parameter: a dispatch gets the definition's, or
@@ -287,6 +291,54 @@ measured by persistence, not insight: about 1,330 turns against 476 for Opus at
 `medium` — where the agent must decide where to look on its own — it clearly
 trails Opus. Its unplanted fixes (24.5 against 9) track that volume and the
 model family's style — GPT runs fix 40 to 55 — not judgment.
+
+## Workflows
+
+`workflows.md` holds the rules; this is the evidence behind them, as of
+September 2026. Re-check it when the Workflow tool changes — its opt-in rule
+and its limits are the parts most likely to move.
+
+Sources:
+
+- Claude Code docs, *Orchestrate subagents at scale with dynamic workflows* —
+  https://code.claude.com/docs/en/workflows
+- Claude Code docs, *Run agents in parallel* —
+  https://code.claude.com/docs/en/agents
+- Anthropic, *Introducing dynamic workflows* (May 2026) —
+  https://claude.com/blog/introducing-dynamic-workflows-in-claude-code
+- Claude Cookbook, *Orchestrate subagents at scale with dynamic workflows* —
+  https://platform.claude.com/cookbook/claude-agent-sdk-08-dynamic-workflows
+- Anthropic, *How we built our multi-agent research system* —
+  https://www.anthropic.com/engineering/multi-agent-research-system
+
+What they establish:
+
+- **The difference is who holds the plan.** With subagents Claude decides turn
+  by turn and every result lands in its context; a workflow's script holds the
+  loop, the branching and the intermediate results, so only the final answer
+  comes back — and a quality pattern (adversarial verification, independent
+  attempts) runs because the code says so.
+- **When it pays.** The cookbook's test: "the task outgrows one context window
+  (many items, many sources), needs verification you can't afford to skip, or
+  is a process you'll repeat" — while for a single agent, "most tasks live
+  here". The docs add a hard plan drafted from several independent angles.
+- **Coupled work is the poor fit.** Multi-agent systems struggle where agents
+  must share one context or depend heavily on each other, and "most coding
+  tasks involve fewer truly parallelizable tasks than research". That is why
+  only the pipeline's two reviews can become workflows, never its
+  implementation.
+- **Claude cannot opt in for the user.** The Workflow tool's own description
+  allows a run only on an explicit opt-in: the `ultracode` keyword, ultracode on
+  for the session, a direct request in the user's words, a skill or command the
+  user invoked that calls for one, or a saved workflow the user named. A
+  CLAUDE.md rule is none of these, and the docs count the keyword only in a
+  prompt a human typed — not `-p`, a scheduled task or a relayed webhook. Hence
+  propose-then-run, and the offer at the pipeline's one human gate.
+- **Cost.** Multi-agent systems used about 15× the tokens of a chat in
+  Anthropic's research system; the cookbook's ten-claim fact-check took about
+  550k tokens and $3.29. Claude Code flags a run past 25 agents or 1.5M
+  projected tokens, and by default aims under 10 agents (the `medium` size
+  guideline in `/config`). The docs' advice: run a slice first.
 
 ## The lab runner
 
