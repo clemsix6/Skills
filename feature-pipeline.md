@@ -203,7 +203,7 @@ You may adjust the spec autonomously. The line:
 
 ### Models
 
-Every review on Opus, execution on Sonnet — never Fable (see `general.md`).
+Every review on Opus, execution on Sonnet — never Fable (see `subagent-models.md`).
 
 | Role | Model | Dispatched as |
 |---|---|---|

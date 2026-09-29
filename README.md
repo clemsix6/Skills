@@ -82,7 +82,8 @@ reviews diffs.
 
 | File | Contents |
 |---|---|
-| `general.md` | Cross-language defaults: command runner (just), subagent models, comment rules, CLAUDE.md design rules |
+| `general.md` | Cross-language defaults: command runner (just), comment rules, CLAUDE.md design rules; imports `subagent-models.md` |
+| `subagent-models.md` | Which model and effort each subagent gets, in a pipeline or not — loaded through `general.md`, never imported directly |
 | `go-style.md` | Go coding standards |
 | `rust-style.md` | Rust coding standards |
 | `commit-convention.md` | Commit message format |
@@ -143,16 +144,19 @@ needs no `.claude/agents/` of its own and every project gets them at once.
 |---|---|---|---|
 | `pipeline-spec-plan-review` | opus | high | Reviews spec and plan together — the only gate before code exists |
 | `pipeline-batch-review` | opus | high | Reviews the diff of a batch the plan marks `review`, before the rest of the feature builds on it |
-| `pipeline-implement` | sonnet | inherit | Implements one batch whole, reading the plan and spec from the repo itself |
+| `pipeline-implement` | sonnet | medium | Implements one batch whole, reading the plan and spec from the repo itself |
 | `pipeline-final-review` | opus | max | Reviews the assembled feature before the PR goes to a human — coverage, cross-batch coherence, accumulated drift |
-| `implement` | sonnet | inherit | Implements one decided change outside the pipeline — a fix, a small change — from the exact change and the verification commands it is given; no commit |
+| `implement` | sonnet | medium | Implements one decided change outside the pipeline — a fix, a small change — from the exact change and the verification commands it is given; no commit |
 
 Effort follows how much each pass holds at once: the final review sees the whole
 feature and the whole diff, so it runs at `max`; the two earlier gates read two
-documents and one batch's diff.
+documents and one batch's diff. The implementers pin `medium`, the documented
+starting point for well-specified agentic coding on Sonnet: unpinned, they would
+run at the session's effort, and Sonnet at `xhigh` or `max` is slow and costly
+for work a plan already specifies.
 
 Every definition pins its model, because `inherit` hands a subagent the
-session's model — a Fable subagent on a Fable session, which `general.md`
+session's model — a Fable subagent on a Fable session, which `subagent-models.md`
 forbids unless the user asks. Reviews pin `opus`, implementation `sonnet`.
 
 `pipeline-batch-review` is the only conditional agent: it is dispatched for a
@@ -180,7 +184,7 @@ Treat a violation as a bug to fix, not as something the configuration prevents.
 They are definitions rather than dispatch-time prompts because a subagent's
 system prompt *is* its definition body — on `general-purpose`, every role's
 protocol would be rewritten by its caller at each dispatch. Definitions also
-carry `effort` and pinned `tools`, which no dispatch parameter can set.
+carry `effort` and pinned `tools`, which no Agent-tool parameter can set.
 
 CLAUDE.md loads in every custom subagent, so these bodies hold role protocol
 only: the fragments imported by the project supply code style, commit format
@@ -211,13 +215,78 @@ what one of them acts on.
   one agent at a time and a feature costs a handful in total, so neither binds.
   Hitting the session cap produces an error telling the caller to do the work
   itself — the pipeline says to take that to the supervisor instead.
-- **Effort** is frontmatter-only, with no dispatch-time equivalent. `model` can
-  be set at either, and the dispatch parameter wins; `CLAUDE_CODE_SUBAGENT_MODEL`
+- **Effort** has no Agent-tool parameter: a dispatch gets the definition's, or
+  the session's when the definition pins none. A workflow script's `agent()`
+  does take `effort` per call. `model` can be set at either, and the dispatch
+  parameter wins; `CLAUDE_CODE_SUBAGENT_MODEL`
   only fills in when neither is set (since 2.1.251 — before that it beat both).
 - **Model aliases** resolve through the environment: `sonnet` in a definition
   means whatever `ANTHROPIC_DEFAULT_SONNET_MODEL` names for that session. That
   is how the same definitions run on the vendor's models under one alias and on
   a third-party pair under another (see "The lab runner").
+
+## Subagent models
+
+`subagent-models.md` holds the rules; this is the evidence behind them,
+measured on Opus 5.5 and Sonnet 5.5 in September 2026. Re-check it when a new
+model generation ships — effort levels are recalibrated between generations.
+
+Sources:
+
+- Anthropic, *Building with Claude Sonnet 5.5* —
+  https://claude.dev/blog/building-with-claude-sonnet-5-5/
+- Anthropic, *Using Claude Code: Spending your effort* —
+  https://claude.dev/blog/spending-your-effort/
+- Bug Hunt Bench — 105 bugs planted in two production repos, one "find and fix
+  what you can" prompt per repo, graded blind against a withheld answer key —
+  https://bughunt.productcompass.pm, raw data in
+  https://github.com/phuryn/bug-hunt-bench
+
+What they establish:
+
+- **Sonnet for well-scoped work, Opus for judgment.** Anthropic's own split:
+  Sonnet for well-scoped coding, verifying against requirements, documents, and
+  well-defined agent tasks run repeatedly (investigation, review, drafting);
+  Opus for complex work requiring careful judgment, long-horizon agentic work,
+  and the hardest problems. Sonnet "fits best when the task has a clear spec and
+  a way to check the result". Review and investigation stay on Opus here: the
+  reviews are the gates the pipeline relies on, and investigation means
+  diagnosis, not lookup.
+- **Effort buys thoroughness, not judgment.** On Terminal-Bench 3.0, raising
+  Fable 5.1 from low to max cut "missed a case" failures from 59 to 24 but
+  "made the wrong call" only from 133 to 107 — "picked the wrong reading" rose
+  from 25 to 47. Effort pays most on edge-case-heavy work (security 64 → 87 %,
+  hardware 34 → 75 %) and least on rulebook work (operations 12 → 22 %).
+- **Opus 5.5 flattens after `medium`**: roughly 36 % at low, 54 % at medium,
+  59 % at high, 62 % at xhigh, 65 % at max on Terminal-Bench 3.0, each step
+  costing markedly more tokens. At high it matches Fable 5.1 at max for half the
+  tokens.
+- **No user in the loop favours higher effort**: at low, the model picks a
+  plausible reading and reports; at high it tries alternatives and checks them.
+  A detailed spec narrows the gap between levels.
+- **Sonnet 5.5 at `low` sometimes skips the check that exercises a change.**
+  Anthropic's starting points: `medium` for well-specified agentic coding,
+  `high` for harder or longer work, `xhigh`/`max` only where evals show a gain —
+  there Sonnet "will think longer and cost more", and Opus may be the better
+  choice. Claude Code runs Sonnet 5.5 at `medium` by default.
+- **Exhaustive bug hunting is the exception.** Bug Hunt Bench, Claude Code
+  runs, planted bugs fixed out of 105:
+
+| Effort | Sonnet 5.5 | Opus 5.5 (mean of 3 runs) |
+|---|---|---|
+| low | 20 · 7 min · $6 | 22.3 · 12 min · $8 |
+| medium | 18 · 12 min · $8 | 30.3 · 17 min · $16 |
+| high | 32 · 24 min · $17 | 31.7 · 24 min · $22 |
+| xhigh | 39 · 122 min · $60 | 36 · 42 min · $35 |
+| max | 55.5 (runs of 57 and 54) · 235 min · $135 | 41.7 · 67 min · $59 |
+
+Sonnet rows are single runs except `max`, and the bench measures about ten
+points of spread on one configuration. Sonnet at `max` leads every model
+measured by persistence, not insight: about 1,330 turns against 476 for Opus at
+`max`, for 3.5× the time and 2.3× the cost. Below `max` it has no edge, and at
+`medium` — where the agent must decide where to look on its own — it clearly
+trails Opus. Its unplanted fixes (24.5 against 9) track that volume and the
+model family's style — GPT runs fix 40 to 55 — not judgment.
 
 ## The lab runner
 

@@ -2,6 +2,7 @@
 name: pipeline-implement
 description: Implements one batch of a feature plan — every task in it, in order, ending with the integration task. Dispatched by the orchestrator, one batch at a time. Reads the plan and spec from the worktree itself, commits its own work, returns a short report.
 model: sonnet
+effort: medium
 disallowedTools: Agent
 color: green
 ---

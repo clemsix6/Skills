@@ -2,6 +2,7 @@
 name: implement
 description: Implements one decided change outside the feature pipeline — a fix, a small change, a refactor the dispatching thread has already diagnosed and specified. Given the exact change, the files and the verification commands; edits, verifies, reports. Never commits.
 model: sonnet
+effort: medium
 disallowedTools: Agent
 color: green
 ---
