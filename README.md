@@ -67,9 +67,10 @@ skills are installed — its first steps call the `brainstorming` skill and the
 standard spec and plan formats. Import it only into projects that have them.
 
 Drop `go-style` for non-Go repos. For Rust code, import
-`@~/Skills/rust-style.md` — in a mixed repo, put that line in a
-`CLAUDE.md` inside the Rust subdirectory so it loads only when Rust files
-are touched. Projects that keep a graphify knowledge graph also import
+`@~/Skills/rust-style.md`, and for TypeScript code (React, React Native,
+Node) `@~/Skills/ts-style.md` — in a mixed repo, put that line in a
+`CLAUDE.md` inside the matching subdirectory so it loads only when those
+files are touched. Projects that keep a graphify knowledge graph also import
 `@~/Skills/graphify.md` (inert when `graphify-out/` is absent). Projects with
 a kanban tenant also import `@~/Skills/kanban-tickets.md` and declare
 `tenant`, `workflow` and `label` in their own CLAUDE.md (see that fragment).
@@ -87,6 +88,7 @@ reviews diffs.
 | `workflows.md` | When a workflow beats subagents, and how to offer one — loaded through `general.md`, never imported directly |
 | `go-style.md` | Go coding standards |
 | `rust-style.md` | Rust coding standards |
+| `ts-style.md` | TypeScript and React coding standards (React Native and web) |
 | `commit-convention.md` | Commit message format |
 | `git-workflow.md` | Branching model and PR lifecycle |
 | `feature-pipeline.md` | The feature-development pipeline: steps, plan rules, dispatch and scope |
