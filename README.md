@@ -234,8 +234,9 @@ what one of them acts on.
 ## Subagent models
 
 `subagent-models.md` holds the rules; this is the evidence behind them,
-measured on Opus 5.5 and Sonnet 5.5 in September 2026. Re-check it when a new
-model generation ships — effort levels are recalibrated between generations.
+measured on Opus 5.5 and Sonnet 5.5 in September 2026, Haiku 5.5 in October
+2026. Re-check it when a new model generation ships — effort levels are
+recalibrated between generations.
 
 Sources:
 
@@ -293,6 +294,58 @@ measured by persistence, not insight: about 1,330 turns against 476 for Opus at
 `medium` — where the agent must decide where to look on its own — it clearly
 trails Opus. Its unplanted fixes (24.5 against 9) track that volume and the
 model family's style — GPT runs fix 40 to 55 — not judgment.
+
+### Haiku 5.5
+
+Released October 7, 2026. Sources:
+
+- Anthropic, *Introducing Claude Haiku 5.5* —
+  https://www.anthropic.com/claude-haiku-5-5
+- Claude docs, *Claude Haiku 5.5* model page —
+  https://platform.claude.com/docs/en/models/haiku-5-5/overview
+- Claude docs, *Prompting Claude Haiku 5.5* —
+  https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/prompting-claude-haiku-5-5
+- Claude Code docs, *Subagents* and *Model configuration* —
+  https://code.claude.com/docs/en/sub-agents,
+  https://code.claude.com/docs/en/model-config
+
+What they establish:
+
+- **Narrow work under a stronger lead.** Anthropic's positioning: "high-volume,
+  latency-sensitive work such as classification, routing, extraction, and
+  subagent tasks". The launch names quick lookups, pulling figures from a
+  filing, summaries, compaction, live support and browser use, and keeps
+  Sonnet 5.5 and Opus 5.5 as the better choice for complex agentic coding.
+  Customers run it as a sidekick under an Opus 5.5 lead.
+- **The gap to Sonnet depends on the work**:
+
+| Benchmark | Haiku 5.5 | Sonnet 5.5 | Haiku 4.5 |
+|---|---|---|---|
+| OSWorld 2.1, offline subset — computer use | 72.4 % | 83.9 % | 15.7 % |
+| Humanity's Last Exam, with tools | 57.4 % | 64.5 % | 18.7 % |
+| GDPval-AA v2.1 — knowledge work (Elo) | 1620 | 1840 | 735 |
+| Terminal-Bench 4.0 — agentic coding | 39.2 % | 70.6 % | 0.0 % |
+
+- **Price.** Per million tokens, $0.10 in / $0.50 out for prompts up to 100k
+  tokens, $0.50 / $2.50 beyond — against $2 / $10 for Sonnet 5.5 and $4 / $20
+  for Opus 5.5: twenty times under Sonnet, still four times under it on long
+  prompts. Its tokenizer counts about 30 % more tokens than Haiku 4.5's. On a
+  subscription it draws next to nothing from the plan's limits.
+- **Quiet misses.** Anthropic's prompting guide: at `low`, under a long agent
+  prompt, it may skip a search, stop early and hand the task back, or skip a
+  check; at `low` and `medium` it sometimes reports a code change done without
+  running one. Hence read-and-report work, evidence in the report, edits on
+  Sonnet.
+- **Effort.** The first Haiku with effort levels. Default `medium` on the API
+  and in Claude Code; `low` for simple high-volume requests, `medium` for most
+  work, `high` for knowledge work, longer agent tasks and strict instruction
+  following. At `xhigh` and `max` thinking and replies get much longer, and
+  Anthropic's advice there is to compare against Sonnet 5.5.
+- **In Claude Code** the `haiku` alias resolves to Haiku 5.5 on the Anthropic
+  API (v2.1.293 and later), and its thinking cannot be turned off. The built-in
+  Explore agent runs on the session's model, not Haiku — a lookup dispatched
+  without `model: haiku` runs on Opus in an Opus session. `claude-code-guide`
+  runs on Haiku.
 
 ## Workflows
 

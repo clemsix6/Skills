@@ -16,33 +16,62 @@ session running on Fable, is not a request.
 - **No fork from a Fable session** — a fork always runs on its parent's model
   and ignores `model`. Dispatch a fresh agent with a written brief instead.
 
-### Model: Does the Work Need Judgment?
+### Model: Haiku Reads, Sonnet Builds, Opus Judges
 
 Before dispatching, ask whether you can hand the agent **an exact brief and a
 way to check its result**.
 
-- **Yes → `sonnet`.** Well-scoped work is what it is built for, faster and
-  cheaper than Opus.
 - **No → `opus`** — or think it through yourself until you can write both.
   Deciding what to do is judgment, and judgment is what the stronger model
   buys: more effort makes an agent more thorough, never better at choosing the
   approach.
+- **Yes, and the agent changes something** — code, a file, a document →
+  `sonnet`. Well-scoped work is what it is built for, faster and cheaper than
+  Opus.
+- **Yes, and the agent only reads, runs and reports → `haiku`**, provided a
+  wrong or incomplete answer would show when you use it.
 
 | Work | Model |
 |---|---|
-| Search, exploration, reading to answer a precise question | `sonnet` |
-| Running commands, gathering data, mechanical edits | `sonnet` |
-| Implementing a decided change or a planned batch | `sonnet` |
+| A lookup — where something is defined, which code handles a case, one precise question | `haiku` |
+| Running commands and reporting what they print — tests, builds, logs, queries | `haiku` |
+| Fetching documentation or web pages and condensing them | `haiku` |
+| Bulk extraction or classification; a workflow's fan-out readers, one per item | `haiku` |
+| Driving a browser | `haiku` |
+| Exploration you will build on without re-reading — how a subsystem works, what a change touches | `sonnet` |
+| Mechanical edits, implementing a decided change or a planned batch | `sonnet` |
 | Drafting a document, a report, a deck | `sonnet` |
 | Debugging, the root cause of an unexplained failure | `opus` |
 | Code review, checking work against its spec | `opus` |
 | Planning, design, arbitrating between options | `opus` |
 | Long autonomous work whose approach is not given | `opus` |
-| High-volume mechanical work checked right after — driving a browser, bulk extraction | `haiku` |
 
-**Two failures on the same task move it to `opus`.** Two misses on a clear
-brief point to the approach, which the stronger model fixes and a third
+**Misses move a task up.** A Haiku answer that proves wrong or incomplete sends
+the task to `sonnet`: the miss shows the task was not as narrow as it looked.
+Two failures by Sonnet on the same task move it to `opus` — two misses on a
+clear brief point to the approach, which the stronger model fixes and a third
 attempt does not.
+
+### Haiku: Nearly Free, Fastest, Narrow
+
+Haiku costs a small fraction of Sonnet — on a subscription it barely registers
+against the plan's limits — and it is the fastest model. So the question is
+never whether a task is worth a Haiku agent, only whether the task is narrow:
+
+- **Narrow work holds up.** Lookups, extraction, summaries, classification,
+  driving a browser or a desktop: there it reaches most of Sonnet's level.
+- **Long multi-step coding does not** — there it scores about half of what
+  Sonnet does. Anthropic places it as a subagent under a Sonnet or Opus lead,
+  not as the agent that writes the change.
+- **Its misses are quiet.** At low effort or under a long brief it can skip a
+  search, stop before the work is done, or call a change done without running
+  the check. Hence read-and-report work only, and a report you can check at a
+  glance: **ask for evidence, not verdicts** — the path and line found, the
+  failing output quoted, the figure with its source.
+
+Being nearly free, it also moves the point where delegating pays: a search or a
+command whose raw output would flood your context costs next to nothing on
+Haiku, and only the answer comes back.
 
 ### Effort
 
@@ -73,3 +102,10 @@ On Sonnet, `xhigh` and `max` spend the speed it was picked for, so such work
 goes to Opus — except an exhaustive bug hunt with no time pressure, where Sonnet
 at `max` found the most bugs of any model measured, at several times Opus's time
 and cost.
+
+On Haiku, `medium` — its default — fits nearly everything it should get;
+`high` when the brief carries a long list of rules or a strict output format.
+Never `low`: that is where it skips searches and stops early. Work that seems
+to need more than `high` is not narrow — give it to Sonnet. From the Agent
+tool Haiku runs at the session's effort, which is fine: above `high` it gets
+slower, still for next to nothing.
