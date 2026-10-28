@@ -34,6 +34,36 @@ Model and effort for every subagent: @~/Skills/subagent-models.md
 
 When to propose a workflow instead of subagents: @~/Skills/workflows.md
 
+### LLM Prompts (CRUCIAL)
+
+Before writing a new LLM prompt or changing an existing one, re-read
+Anthropic's current official prompt-engineering guidance online. It changes
+with every model generation, so recall and old digests go stale:
+
+- Prompting best practices:
+  https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
+- The prompting page for the model the prompt targets.
+- Reduce hallucinations:
+  https://platform.claude.com/docs/en/test-and-evaluate/strengthen-guardrails/reduce-hallucinations
+- Effective context engineering for AI agents:
+  https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+
+Then hold the prompt to these principles:
+
+- **Principles, not case-by-case rules.** State the goal and why it matters
+  in a few general instructions. Never add a line per observed defect — a
+  word, an edge case, a list of counter-examples. Recent models follow
+  instructions literally, so stray or contradictory rules cost. A rare
+  residual defect is caught by a verification step and measured, not
+  patched into the prompt.
+- **Ground it and allow silence.** When the output states facts, restrict the
+  model to the provided sources and give it a legitimate "nothing solid to
+  say" output instead of forcing a text.
+- **Separate generation from verification** when an error is costly: a
+  distinct call checks each claim against the sources.
+- **Measure every change** on real cases against the previous version, with a
+  pass criterion fixed before the run.
+
 ### Comments Must Not Rot (CRUCIAL)
 
 A comment is written once and read for years while the code under it keeps
